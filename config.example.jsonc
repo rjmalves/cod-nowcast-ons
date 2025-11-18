@@ -1,0 +1,32 @@
+{
+    // The mode on which the application will run: train or inference
+    "mode": "inference",
+    // The absolute or relative path to the input data (local or S3)
+    "input": "data/input",
+    // The absolute or relative path to the output data (local or S3)
+    "output": "data/output",
+    // The base datetime for forecasting
+    "base_datetime": "2024-08-01T10:00:00",
+    // Number of past samples for motion flow estimation
+    "num_past_samples": 6,
+    // Number of future samples for nowcasting
+    "num_future_samples": 6,
+    // Latitude/longitude subgrids
+    "subgrids": [
+        {
+            "name": "SE",
+            "lat": [
+                -23.0,
+                -2.0
+            ],
+            "lon": [
+                -53.0,
+                -35.0
+            ]
+        },
+    ],
+    // Postprocessing options
+    "postprocessing": {
+        "plots": true
+    }
+}

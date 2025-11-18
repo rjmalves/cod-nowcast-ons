@@ -205,3 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+*.parquet
+*.png
+*.gif
+*.txt
+*.csv
+*.html
+
+# Shapefiles
+*.cpg
+*.dbf
+*.prj
+*.shp
+*.shx
+
+# Data
+data/*
