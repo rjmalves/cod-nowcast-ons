@@ -16,6 +16,17 @@ def write_inference_results(config: Config, result: InferenceResult):
         df = subgrid_result.cod.to_dataframe(name="cod").reset_index()
         dfs.append(df)
     final_df = pd.concat(dfs, axis=0, ignore_index=True)
+    final_df["data_hora_rodada"] = config.base_datetime
+    final_df = final_df.rename(columns={"time": "data_hora_previsao", "cod": "valor"})
+    final_df = final_df[
+        [
+            "data_hora_rodada",
+            "data_hora_previsao",
+            "latitude",
+            "longitude",
+            "valor",
+        ]
+    ]
     output_path = join(output_dir, "cod.parquet")
     final_df.to_parquet(output_path)
 
@@ -34,5 +45,6 @@ def write_cloud_motion_plots(
             output_gif_filename=join(
                 output_dir, f"{subgrid_name}_forecast.gif"
             ),
+            image_prefix=subgrid_name,
             keep_frames=True,
         )

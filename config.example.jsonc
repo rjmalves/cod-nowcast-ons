@@ -8,7 +8,7 @@
     // The base datetime for forecasting
     "base_datetime": "2024-08-01T10:00:00",
     // Number of past samples for motion flow estimation
-    "num_past_samples": 6,
+    "num_past_samples": 36,
     // Number of future samples for nowcasting
     "num_future_samples": 6,
     // Latitude/longitude subgrids
@@ -23,7 +23,7 @@
                 -53.0,
                 -35.0
             ]
-        },
+        }
     ],
     // Postprocessing options
     "postprocessing": {

@@ -71,6 +71,7 @@ def render_cod_forecast_frame(
     step: int,
     figsize_pixels: tuple = (720, 720),
     image_output_dir: str = "steps",
+    image_prefix: str = "frame",
     shapefile_path: str = "data/shapes/BR_UF_2022.shp",
 ) -> str:
     """Render a single COD forecast frame and save it to disk.
@@ -160,7 +161,7 @@ def render_cod_forecast_frame(
     ax.set_title(title_left, fontweight="bold", fontsize=10, loc="left")
     ax.set_title(title_right, fontsize=10, loc="right")
 
-    filename = f"{image_output_dir}/{step}.png"
+    filename = f"{image_output_dir}/{image_prefix}_{str(step).zfill(4)}.png"
     plt.savefig(filename, bbox_inches="tight", pad_inches=0)
     plt.close()
     return filename
@@ -174,6 +175,7 @@ def generate_cod_forecast_gif(
     frame_interval_ms: int = 300,
     repeat_delay_ms: int = 700,
     image_output_dir: str = "steps",
+    image_prefix: str = "frame",
     keep_frames: bool = False,
 ) -> None:
     """Generate an animated GIF from COD forecast and motion field.
@@ -194,6 +196,7 @@ def generate_cod_forecast_gif(
                 step,
                 figsize_pixels=figsize_pixels,
                 image_output_dir=image_output_dir,
+                image_prefix=image_prefix
             )
         )
 
