@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -6,6 +5,7 @@ import polars as pl
 import xarray as xr
 
 from app.internal.config import SubgridConfig
+from app.storage import StorageFactory
 
 
 @dataclass
@@ -24,9 +24,14 @@ class SubgridInputData:
     def from_parquet(
         cls, config: SubgridConfig, time: datetime, directory: str
     ) -> "SubgridInputData":
-        filepath = os.path.join(directory, cls.goes_input_filename(time))
+        storage = StorageFactory.get_storage(directory)
+        
+        filepath = storage.join_path(
+            directory, cls.goes_input_filename(time)
+        )
+        
         df = (
-            pl.scan_parquet(filepath)
+            storage.read_parquet(filepath)
             .filter(
                 (pl.col("latitude") >= config.lat[0])
                 & (pl.col("latitude") <= config.lat[1])

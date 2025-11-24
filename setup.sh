@@ -81,9 +81,6 @@ else
 	log "System mode: Installing to $INSTALL_DIR (requires sudo)"
 fi
 
-	log "System mode: Installing to $INSTALL_DIR (requires sudo)"
-fi
-
 # Check if running with appropriate privileges
 if [[ $USE_SUDO -eq 1 && $EUID -ne 0 ]]; then
 	error "System installation requires sudo. Run: sudo ./setup.sh"
@@ -168,7 +165,7 @@ python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1
 
 log "Installing $APP_NAME..."
 cd "$INSTALL_DIR"
-pip install . >/dev/null 2>&1
+pip install . 2>&1
 
 # Create .env if needed
 if [[ ! -f "$INSTALL_DIR/.env" && -f "$INSTALL_DIR/.env.example" ]]; then

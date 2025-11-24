@@ -40,6 +40,7 @@
 - **Lagrangian Extrapolation**: Projects cloud fields forward in time based on detected motion
 - **GOES Satellite Support**: Specifically designed for GOES-derived Cloud Optical Depth data
 - **Subgrid Processing**: Configure multiple geographic regions of interest for parallel forecasting
+- **S3 Storage Support**: Transparent read/write from Amazon S3 buckets with automatic backend selection
 - **Automated Visualization**: Generate animated GIF forecasts with motion vectors overlaid
 - **Flexible Output**: Export results as Parquet files for downstream analysis
 - **Simple Configuration**: JSON-based configuration with sensible defaults
@@ -276,6 +277,205 @@ cp config.example.jsonc config.jsonc
 - Required columns: `latitude`, `longitude`, `cod`
 - Data should be on a regular lat/lon grid
 - Missing values should be NaN or null
+
+---
+
+## S3 Storage Support
+
+`cod-nowcast-ons` includes transparent support for Amazon S3 storage, allowing you to read input data from and write output data to S3 buckets without code changes. The application automatically detects S3 URIs and uses the appropriate storage backend.
+
+### Features
+
+- **Transparent I/O**: Use S3 URIs just like local paths in your configuration
+- **Mixed Storage**: Input from S3, output locally (or vice versa)
+- **Full Feature Support**: All operations work with S3 (Parquet read/write, plot generation)
+- **AWS Credentials**: Uses standard AWS credential chain (environment variables, AWS CLI, IAM roles)
+
+### Configuration Examples
+
+#### Local Filesystem (Traditional)
+
+```jsonc
+{
+  "mode": "inference",
+  "input": "data/input",
+  "output": "data/output",
+  "base_datetime": "2024-08-01T10:00:00",
+  "num_past_samples": 6,
+  "num_future_samples": 6,
+  "subgrids": [
+    {
+      "name": "SE",
+      "lat": [-23.0, -2.0],
+      "lon": [-53.0, -35.0]
+    }
+  ]
+}
+```
+
+#### S3 Input and Output
+
+```jsonc
+{
+  "mode": "inference",
+  "input": "s3://my-weather-bucket/goes-cod/input",
+  "output": "s3://my-weather-bucket/goes-cod/output",
+  "base_datetime": "2024-08-01T10:00:00",
+  "num_past_samples": 6,
+  "num_future_samples": 6,
+  "subgrids": [
+    {
+      "name": "SE",
+      "lat": [-23.0, -2.0],
+      "lon": [-53.0, -35.0]
+    }
+  ]
+}
+```
+
+#### Mixed: S3 Input, Local Output
+
+```jsonc
+{
+  "mode": "inference",
+  "input": "s3://my-weather-bucket/goes-cod/input",
+  "output": "data/output",
+  "base_datetime": "2024-08-01T10:00:00",
+  "num_past_samples": 6,
+  "num_future_samples": 6,
+  "subgrids": [
+    {
+      "name": "SE",
+      "lat": [-23.0, -2.0],
+      "lon": [-53.0, -35.0]
+    }
+  ]
+}
+```
+
+### AWS Authentication
+
+The application uses standard AWS credential resolution order:
+
+#### 1. Environment Variables
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_DEFAULT_REGION="us-east-1"
+
+cod-nowcast-ons --config config.jsonc
+```
+
+#### 2. AWS CLI Configuration
+
+```bash
+aws configure
+# Follow prompts to set:
+#   AWS Access Key ID
+#   AWS Secret Access Key
+#   Default region name
+#   Default output format
+
+cod-nowcast-ons --config config.jsonc
+```
+
+#### 3. IAM Role (EC2/ECS/Lambda)
+
+When running on AWS compute services with an attached IAM role, no credentials are needed:
+
+```bash
+# Running on EC2 instance with IAM role
+cod-nowcast-ons --config config.jsonc
+```
+
+### Required S3 Permissions
+
+Your AWS credentials or IAM role must have the following permissions:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::my-weather-bucket/*",
+        "arn:aws:s3:::my-weather-bucket"
+      ]
+    }
+  ]
+}
+```
+
+### S3 Data Organization
+
+Organize your S3 bucket similar to local filesystem structure:
+
+```
+s3://my-weather-bucket/
+├── goes-cod/
+│   ├── input/
+│   │   ├── GOES_COD_BR_20240801-0900.parquet
+│   │   ├── GOES_COD_BR_20240801-0910.parquet
+│   │   ├── GOES_COD_BR_20240801-0920.parquet
+│   │   └── ...
+│   └── output/
+│       ├── cod.parquet
+│       └── plots/
+│           ├── SE_forecast.gif
+│           ├── SE_0000.png
+│           └── ...
+```
+
+### Performance Considerations
+
+**S3 Read Optimization**:
+- Uses `s3fs` and `pyarrow` for efficient Parquet streaming
+- Leverages Polars' lazy evaluation with S3 storage options
+- Automatic connection pooling and retry logic
+
+**S3 Write Optimization**:
+- Batch operations minimize API calls
+- Temporary local buffering for image generation
+- Parallel uploads for multi-subgrid outputs
+
+**Cost Optimization**:
+- Monitor S3 request costs (GET, PUT, LIST operations)
+- Use S3 Lifecycle policies to archive old forecasts
+- Consider S3 Intelligent-Tiering for infrequent access patterns
+
+### Troubleshooting S3
+
+**NoCredentialsError**:
+```
+botocore.exceptions.NoCredentialsError: Unable to locate credentials
+```
+Solution: Configure AWS credentials using one of the methods above.
+
+**AccessDenied**:
+```
+botocore.exceptions.ClientError: An error occurred (AccessDenied) when calling the GetObject operation
+```
+Solution: Verify IAM permissions include required S3 actions.
+
+**NoSuchBucket**:
+```
+botocore.exceptions.ClientError: An error occurred (NoSuchBucket) when calling the ListObjectsV2 operation
+```
+Solution: Check bucket name spelling and verify the bucket exists in your AWS account.
+
+**Region Mismatch**:
+```
+botocore.exceptions.ClientError: An error occurred (301) when calling the ListObjectsV2 operation: Moved Permanently
+```
+Solution: Set `AWS_DEFAULT_REGION` to match your bucket's region.
 
 ---
 

@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Optional, Tuple
 
 import cartopy
 import cartopy.crs as ccrs
@@ -10,6 +10,8 @@ import numpy as np
 import xarray as xr
 from matplotlib import colors, rcParams
 from PIL import Image
+
+from app.storage import LocalBackend, StorageBackend
 
 
 def _cod_colormap_and_norm() -> Tuple[colors.Colormap, colors.BoundaryNorm]:
@@ -73,6 +75,7 @@ def render_cod_forecast_frame(
     image_output_dir: str = "steps",
     image_prefix: str = "frame",
     shapefile_path: str = "data/shapes/BR_UF_2022.shp",
+    storage: Optional[StorageBackend] = None,
 ) -> str:
     """Render a single COD forecast frame and save it to disk.
 
@@ -82,11 +85,15 @@ def render_cod_forecast_frame(
         step: Frame index (time dimension index) to render.
         image_output_dir: Directory where the frame image will be saved.
         shapefile_path: Path to the shapefile for borders/outlines.
+        storage: Storage backend to use (defaults to LocalBackend).
 
     Returns:
         The saved filename for the rendered frame.
     """
-    os.makedirs(image_output_dir, exist_ok=True)
+    if storage is None:
+        storage = LocalBackend()
+    
+    storage.makedirs(image_output_dir)
 
     cmap, norm = _cod_colormap_and_norm()
 
@@ -161,9 +168,22 @@ def render_cod_forecast_frame(
     ax.set_title(title_left, fontweight="bold", fontsize=10, loc="left")
     ax.set_title(title_right, fontsize=10, loc="right")
 
-    filename = f"{image_output_dir}/{image_prefix}_{str(step).zfill(4)}.png"
-    plt.savefig(filename, bbox_inches="tight", pad_inches=0)
-    plt.close()
+    filename = storage.join_path(
+        image_output_dir, f"{image_prefix}_{str(step).zfill(4)}.png"
+    )
+    
+    if hasattr(storage, "s3_client"):
+        import io
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
+        buf.seek(0)
+        storage.write_bytes(buf.read(), filename)
+        plt.close()
+    else:
+        plt.savefig(filename, bbox_inches="tight", pad_inches=0)
+        plt.close()
+    
     return filename
 
 
@@ -177,16 +197,21 @@ def generate_cod_forecast_gif(
     image_output_dir: str = "steps",
     image_prefix: str = "frame",
     keep_frames: bool = False,
+    storage: Optional[StorageBackend] = None,
 ) -> None:
     """Generate an animated GIF from COD forecast and motion field.
 
     This renders frame images using render_cod_forecast_frame and then composes
     them into an animated GIF.
     """
+    if storage is None:
+        storage = LocalBackend()
+    
     raw = np.array(cod_forecast).transpose((2, 0, 1))
     n_leadtimes = raw.shape[0]
 
-    os.makedirs(image_output_dir, exist_ok=True)
+    storage.makedirs(image_output_dir)
+    
     filenames = []
     for step in range(n_leadtimes):
         filenames.append(
@@ -196,11 +221,30 @@ def generate_cod_forecast_gif(
                 step,
                 figsize_pixels=figsize_pixels,
                 image_output_dir=image_output_dir,
-                image_prefix=image_prefix
+                image_prefix=image_prefix,
+                storage=storage,
             )
         )
 
-    images = [Image.open(fname) for fname in filenames]
+    if hasattr(storage, "s3_client"):
+        import shutil
+        import tempfile
+        
+        temp_dir = tempfile.mkdtemp()
+        local_filenames = []
+        
+        for remote_path in filenames:
+            local_path = os.path.join(
+                temp_dir, os.path.basename(remote_path)
+            )
+            data = storage.read_bytes(remote_path)
+            with open(local_path, "wb") as f:
+                f.write(data)
+            local_filenames.append(local_path)
+        
+        images = [Image.open(fname) for fname in local_filenames]
+    else:
+        images = [Image.open(fname) for fname in filenames]
 
     fig, ax = plt.subplots()
     fig.set_size_inches(*[p / rcParams["figure.dpi"] for p in figsize_pixels])
@@ -221,8 +265,18 @@ def generate_cod_forecast_gif(
         blit=True,
         repeat_delay=repeat_delay_ms,
     )
-    animation_fig.save(output_gif_filename)
+    
+    if hasattr(storage, "s3_client"):
+        temp_gif = tempfile.NamedTemporaryFile(suffix=".gif", delete=False)
+        animation_fig.save(temp_gif.name)
+        with open(temp_gif.name, "rb") as f:
+            storage.write_bytes(f.read(), output_gif_filename)
+        os.unlink(temp_gif.name)
+        
+        shutil.rmtree(temp_dir)
+    else:
+        animation_fig.save(output_gif_filename)
 
     if not keep_frames:
         for fname in filenames:
-            os.remove(fname)
+            storage.delete(fname)
