@@ -6,7 +6,7 @@
 
 **Cloud Optical Depth nowcasting using GOES satellite imagery and optical flow-based extrapolation**
 
-`cod-nowcast-ons` is a specialized nowcasting tool for Cloud Optical Depth (COD) derived from GOES satellite data. It provides short-term (up to ~1 hour) forecasts by applying optical flow motion detection and extrapolation techniques from the [pySTEPS](https://pysteps.readthedocs.io/) library to satellite-derived cloud properties.
+`cod-nowcast-ons` is a specialized nowcasting tool for Cloud Optical Depth (COD) derived from GOES satellite data. It provides short-term (up to ~3 hours) forecasts by applying optical flow motion detection and extrapolation techniques from the [pySTEPS](https://pysteps.readthedocs.io/) library to satellite-derived cloud properties.
 
 ## Table of Contents
 
@@ -783,7 +783,7 @@ If you use this tool in your research, please cite:
 ```
 @software{cod_nowcast_ons,
   title={cod-nowcast-ons: Cloud Optical Depth nowcasting using GOES satellite imagery and optical flow-based extrapolation},
-  author={ Farias, William & Alves, Rogerio},
+  author={Farias, William & Alves, Rogerio},
   year={2025},
   url={https://github.com/rjmalves/cod-nowcast-ons}
 }
