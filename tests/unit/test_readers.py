@@ -172,7 +172,6 @@ class TestInputData:
         assert result.longitude.min() >= sample_subgrid_config.lon[0]
         assert result.longitude.max() <= sample_subgrid_config.lon[1]
 
-
     def test_for_subgrid_missing_file(self, tmp_path):
         """Test that missing file raises appropriate error."""
         subgrid = SubgridConfig(

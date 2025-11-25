@@ -201,6 +201,7 @@ class TestS3Backend:
         storage.delete(test_key)
         assert not storage.exists(test_key)
 
+
 @pytest.mark.unit
 class TestStorageIntegration:
     """Integration tests across storage backends."""

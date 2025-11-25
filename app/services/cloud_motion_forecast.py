@@ -32,7 +32,11 @@ class CloudMotionForecast:
         cod_forecast = extrapolate(last_sample, motion_field, n_leadtimes)
         last_sample_time_step = self.cod.time.values[-1]
         # Casts to python datetime if is numpy datetime
-        last_sample_time_step = last_sample_time_step if isinstance(last_sample_time_step, datetime) else last_sample_time_step.astype("M8[ms]").astype(datetime)
+        last_sample_time_step = (
+            last_sample_time_step
+            if isinstance(last_sample_time_step, datetime)
+            else last_sample_time_step.astype("M8[ms]").astype(datetime)
+        )
         times_cod_forecast = np.array(
             [
                 last_sample_time_step

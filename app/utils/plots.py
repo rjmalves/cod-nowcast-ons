@@ -112,7 +112,9 @@ def render_cod_forecast_frame(
 
     grid_lat, grid_lon = np.mgrid[
         minlat : maxlat : complex(0, cod_forecast.latitude.values.shape[0] + 1),  # type: ignore[misc]
-        minlon : maxlon : complex(0, cod_forecast.longitude.values.shape[0] + 1),  # type: ignore[misc]
+        minlon : maxlon : complex(
+            0, cod_forecast.longitude.values.shape[0] + 1
+        ),  # type: ignore[misc]
     ]
 
     ax.set_extent([minlon, maxlon, minlat, maxlat], ccrs.PlateCarree())  # type: ignore[attr-defined]

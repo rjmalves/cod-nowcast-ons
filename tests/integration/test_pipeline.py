@@ -130,7 +130,6 @@ class TestFullPipeline:
         # Should have data from both regions
         assert len(df) > 0
 
-
     @pytest.mark.plotting
     def test_pipeline_with_plots(self, test_data_dir, temp_output_dir):
         """Test pipeline with plot generation enabled."""

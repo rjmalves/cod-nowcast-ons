@@ -35,7 +35,7 @@ jobs:
     
     - name: Generate test fixtures
       run: |
-        uv run python tests/fixtures/generate_test_data.py --num-files 8 || echo "Test data generation skipped"
+        uv run python tests/fixtures/generate_test_data.py --num-files 5
     
     - name: Lint with ruff
       run: |
@@ -47,11 +47,11 @@ jobs:
     
     - name: Run unit tests
       run: |
-        uv run pytest tests/unit/ -v --tb=short -m "not slow" --cov=app --cov-report=xml --cov-report=term
+        uv run pytest tests/unit/ --cov=app --cov-report=xml --cov-report=term
     
     - name: Run integration tests
       run: |
-        uv run pytest tests/integration/ -v --tb=short -m "not slow and not plotting"
+        uv run pytest tests/integration/
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
