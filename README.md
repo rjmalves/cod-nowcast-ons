@@ -554,12 +554,12 @@ An animated GIF combining all forecast frames in sequence. Useful for:
 │                                               │
 │         ↗  →  →  →  ↘                        │
 │       ↗  [COD field contours]  ↘             │
-│     ↑   with colormap + motion   ↓           │
-│     ↑   vectors overlaid         ↓           │
+│     ↑   with colormap + motion   ↓            │
+│     ↑   vectors overlaid         ↓            │
 │       ↖  ←  ←  ←  ↙                          │
 │                                               │
 ├───────────────────────────────────────────────┤
-│ [Colorbar: 0 ──────────── 100+ COD]          │
+│ [Colorbar: 0 ──────────── 100+ COD]           │
 └───────────────────────────────────────────────┘
 ```
 
@@ -775,7 +775,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 - [pySTEPS](https://pysteps.readthedocs.io/) - Python framework for short-term ensemble prediction systems
 - [GOES Satellite Program](https://www.goes.noaa.gov/) - Geostationary satellite imagery
-- Lucas-Kanade optical flow algorithm (Lucas & Kanade, 1981)
 
 **Citation**:
 
@@ -783,9 +782,9 @@ If you use this tool in your research, please cite:
 
 ```
 @software{cod_nowcast_ons,
-  title={cod-nowcast-ons: Cloud Optical Depth Nowcasting using GOES and pySTEPS},
-  author={Your Name},
-  year={2024},
-  url={https://github.com/yourusername/cod-nowcast-ons}
+  title={cod-nowcast-ons: Cloud Optical Depth nowcasting using GOES satellite imagery and optical flow-based extrapolation},
+  author={ Farias, William & Alves, Rogerio},
+  year={2025},
+  url={https://github.com/rjmalves/cod-nowcast-ons}
 }
 ```

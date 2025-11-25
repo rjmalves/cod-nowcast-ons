@@ -1,8 +1,8 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import numpy as np
 import xarray as xr
-from pysteps import motion, nowcasts
+from pysteps import motion, nowcasts  # type: ignore
 
 
 class CloudMotionForecast:
@@ -31,6 +31,8 @@ class CloudMotionForecast:
         extrapolate = nowcasts.get_method(self.NOWCAST_METHOD)
         cod_forecast = extrapolate(last_sample, motion_field, n_leadtimes)
         last_sample_time_step = self.cod.time.values[-1]
+        # Casts to python datetime if is numpy datetime
+        last_sample_time_step = last_sample_time_step if isinstance(last_sample_time_step, datetime) else last_sample_time_step.astype("M8[ms]").astype(datetime)
         times_cod_forecast = np.array(
             [
                 last_sample_time_step

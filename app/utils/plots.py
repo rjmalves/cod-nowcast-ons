@@ -1,9 +1,8 @@
 import os
-from typing import Optional, Tuple
 
-import cartopy
-import cartopy.crs as ccrs
-import cartopy.io.shapereader as shpreader
+import cartopy  # type: ignore
+import cartopy.crs as ccrs  # type: ignore
+import cartopy.io.shapereader as shpreader  # type: ignore
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,26 +13,28 @@ from PIL import Image
 from app.storage import LocalBackend, StorageBackend
 
 
-def _cod_colormap_and_norm() -> Tuple[colors.Colormap, colors.BoundaryNorm]:
+def _cod_colormap_and_norm() -> tuple[colors.Colormap, colors.BoundaryNorm]:
     color_list = (
-        np.array([
-            (255, 255, 255),  # 0.0
-            (245, 245, 255),  # 0.2
-            (180, 180, 255),  # 0.5
-            (120, 120, 255),  # 1.5
-            (20, 20, 255),  # 2.5
-            (0, 216, 195),  # 4.0
-            (0, 150, 144),  # 6.0
-            (0, 102, 102),  # 10
-            (255, 255, 0),  # 15
-            (255, 200, 0),  # 20
-            (255, 150, 0),  # 30
-            (255, 100, 0),  # 40
-            (255, 0, 0),  # 50
-            (200, 0, 0),  # 60
-            (120, 0, 0),  # 75
-            (40, 0, 0),  # > 100
-        ])
+        np.array(
+            [
+                (255, 255, 255),  # 0.0
+                (245, 245, 255),  # 0.2
+                (180, 180, 255),  # 0.5
+                (120, 120, 255),  # 1.5
+                (20, 20, 255),  # 2.5
+                (0, 216, 195),  # 4.0
+                (0, 150, 144),  # 6.0
+                (0, 102, 102),  # 10
+                (255, 255, 0),  # 15
+                (255, 200, 0),  # 20
+                (255, 150, 0),  # 30
+                (255, 100, 0),  # 40
+                (255, 0, 0),  # 50
+                (200, 0, 0),  # 60
+                (120, 0, 0),  # 75
+                (40, 0, 0),  # > 100
+            ]
+        )
         / 255.0
     )
 
@@ -75,7 +76,7 @@ def render_cod_forecast_frame(
     image_output_dir: str = "steps",
     image_prefix: str = "frame",
     shapefile_path: str = "data/shapes/BR_UF_2022.shp",
-    storage: Optional[StorageBackend] = None,
+    storage: StorageBackend | None = None,
 ) -> str:
     """Render a single COD forecast frame and save it to disk.
 
@@ -92,7 +93,7 @@ def render_cod_forecast_frame(
     """
     if storage is None:
         storage = LocalBackend()
-    
+
     storage.makedirs(image_output_dir)
 
     cmap, norm = _cod_colormap_and_norm()
@@ -171,10 +172,10 @@ def render_cod_forecast_frame(
     filename = storage.join_path(
         image_output_dir, f"{image_prefix}_{str(step).zfill(4)}.png"
     )
-    
+
     if hasattr(storage, "s3_client"):
         import io
-        
+
         buf = io.BytesIO()
         plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
         buf.seek(0)
@@ -183,7 +184,7 @@ def render_cod_forecast_frame(
     else:
         plt.savefig(filename, bbox_inches="tight", pad_inches=0)
         plt.close()
-    
+
     return filename
 
 
@@ -197,7 +198,7 @@ def generate_cod_forecast_gif(
     image_output_dir: str = "steps",
     image_prefix: str = "frame",
     keep_frames: bool = False,
-    storage: Optional[StorageBackend] = None,
+    storage: StorageBackend | None = None,
 ) -> None:
     """Generate an animated GIF from COD forecast and motion field.
 
@@ -206,12 +207,12 @@ def generate_cod_forecast_gif(
     """
     if storage is None:
         storage = LocalBackend()
-    
+
     raw = np.array(cod_forecast).transpose((2, 0, 1))
     n_leadtimes = raw.shape[0]
 
     storage.makedirs(image_output_dir)
-    
+
     filenames = []
     for step in range(n_leadtimes):
         filenames.append(
@@ -229,19 +230,17 @@ def generate_cod_forecast_gif(
     if hasattr(storage, "s3_client"):
         import shutil
         import tempfile
-        
+
         temp_dir = tempfile.mkdtemp()
         local_filenames = []
-        
+
         for remote_path in filenames:
-            local_path = os.path.join(
-                temp_dir, os.path.basename(remote_path)
-            )
+            local_path = os.path.join(temp_dir, os.path.basename(remote_path))
             data = storage.read_bytes(remote_path)
             with open(local_path, "wb") as f:
                 f.write(data)
             local_filenames.append(local_path)
-        
+
         images = [Image.open(fname) for fname in local_filenames]
     else:
         images = [Image.open(fname) for fname in filenames]
@@ -265,14 +264,14 @@ def generate_cod_forecast_gif(
         blit=True,
         repeat_delay=repeat_delay_ms,
     )
-    
+
     if hasattr(storage, "s3_client"):
         temp_gif = tempfile.NamedTemporaryFile(suffix=".gif", delete=False)
         animation_fig.save(temp_gif.name)
         with open(temp_gif.name, "rb") as f:
             storage.write_bytes(f.read(), output_gif_filename)
         os.unlink(temp_gif.name)
-        
+
         shutil.rmtree(temp_dir)
     else:
         animation_fig.save(output_gif_filename)

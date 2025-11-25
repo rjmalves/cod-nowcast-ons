@@ -23,7 +23,7 @@ dependencies = [
     "statsmodels>=0.14.5",
     "xarray>=2025.7.1",
     "boto3>=1.35.0",
-    "s3fs>=2024.10.0",
+    "s3fs>=2024.10.0"
 ]
 
 [tool.hatch.version]
@@ -35,8 +35,84 @@ include = [
   "main.py"
 ]
 
-[tool.ruff]
-line-length = 80
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
+    "pytest-xdist>=3.8.0",
+    "moto[s3]>=5.1.17",
+    "scipy>=1.16.3",
+    "mypy>=1.18.2",
+    "pandas-stubs>=2.3.2.250926",
+    "boto3-stubs>=1.41.3",
+    "ruff>=0.14.6",
+]
 
 [project.scripts]
 cod-nowcast-ons = "main:main"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--showlocals",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests for individual components",
+    "integration: Integration tests for full pipeline",
+    "slow: Tests that take a long time to run",
+    "plotting: Tests that generate plots (skip on CI if needed)",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.ruff]
+line-length = 80
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade",
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["B018"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

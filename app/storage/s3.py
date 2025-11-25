@@ -1,10 +1,9 @@
 import re
-from typing import List, Tuple
 
 import boto3
 import pandas as pd
 import polars as pl
-import s3fs
+import s3fs  # type: ignore
 from botocore.exceptions import ClientError
 
 from .base import StorageBackend
@@ -18,7 +17,7 @@ class S3Backend(StorageBackend):
         self.s3_client = boto3.client("s3")
         self.s3fs = s3fs.S3FileSystem()
 
-    def _parse_s3_uri(self, path: str) -> Tuple[str, str]:
+    def _parse_s3_uri(self, path: str) -> tuple[str, str]:
         """Parse s3://bucket/key into (bucket, key)."""
         match = re.match(r"s3://([^/]+)/(.*)", path)
         if not match:
@@ -61,7 +60,7 @@ class S3Backend(StorageBackend):
         """S3 doesn't need directory creation (flat namespace)."""
         pass
 
-    def list_files(self, path: str, pattern: str = "*") -> List[str]:
+    def list_files(self, path: str, pattern: str = "*") -> list[str]:
         """List S3 objects matching pattern."""
         bucket, prefix = self._parse_s3_uri(path)
 

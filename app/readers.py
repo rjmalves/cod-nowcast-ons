@@ -25,11 +25,9 @@ class SubgridInputData:
         cls, config: SubgridConfig, time: datetime, directory: str
     ) -> "SubgridInputData":
         storage = StorageFactory.get_storage(directory)
-        
-        filepath = storage.join_path(
-            directory, cls.goes_input_filename(time)
-        )
-        
+
+        filepath = storage.join_path(directory, cls.goes_input_filename(time))
+
         df = (
             storage.read_parquet(filepath)
             .filter(
@@ -40,9 +38,11 @@ class SubgridInputData:
             )
             .collect()
         )
-        df = df.with_columns([
-            pl.lit(time).alias("time").cast(pl.Datetime),
-        ])
+        df = df.with_columns(
+            [
+                pl.lit(time).alias("time").cast(pl.Datetime),
+            ]
+        )
         return cls(
             name=config.name,
             latitude_range=config.lat,

@@ -222,3 +222,11 @@ __marimo__/
 
 # Data
 data/*
+!data/.gitkeep
+
+# Test data (keep generated test fixtures out of repo)
+tests/fixtures/data/*
+!tests/fixtures/data/.gitkeep
+
+# LocalStack data
+localstack_data/
