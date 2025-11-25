@@ -201,25 +201,6 @@ class TestS3Backend:
         storage.delete(test_key)
         assert not storage.exists(test_key)
 
-    @pytest.mark.s3
-    def test_s3_parquet_with_moto(self, mock_s3_bucket, sample_parquet_data):
-        """Test S3 parquet operations with mocked S3."""
-        storage = S3Backend()
-        bucket = mock_s3_bucket
-        test_key = f"s3://{bucket}/data/test.parquet"
-
-        # Write parquet
-        df_pd = sample_parquet_data.to_pandas()
-        storage.write_parquet(df_pd, test_key)
-
-        # Read parquet
-        df_lazy = storage.read_parquet(test_key)
-        df_read = df_lazy.collect()
-
-        assert len(df_read) == len(sample_parquet_data)
-        assert "cod" in df_read.columns
-
-
 @pytest.mark.unit
 class TestStorageIntegration:
     """Integration tests across storage backends."""

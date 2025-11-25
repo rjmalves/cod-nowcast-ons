@@ -1,4 +1,3 @@
-from typing import Optional
 
 from .base import StorageBackend
 from .local import LocalBackend
@@ -8,8 +7,8 @@ from .s3 import S3Backend
 class StorageFactory:
     """Factory for creating appropriate storage backend."""
 
-    _local_backend: Optional[LocalBackend] = None
-    _s3_backend: Optional[S3Backend] = None
+    _local_backend: LocalBackend | None = None
+    _s3_backend: S3Backend | None = None
 
     @classmethod
     def get_storage(cls, path: str) -> StorageBackend:

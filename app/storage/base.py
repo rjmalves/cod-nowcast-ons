@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List
 
 import pandas as pd
 import polars as pl
@@ -39,7 +38,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    def list_files(self, path: str, pattern: str = "*") -> List[str]:
+    def list_files(self, path: str, pattern: str = "*") -> list[str]:
         """List files matching pattern."""
         pass
 

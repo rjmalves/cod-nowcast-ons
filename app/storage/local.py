@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 import polars as pl
@@ -38,7 +37,7 @@ class LocalBackend(StorageBackend):
         """Create directory."""
         os.makedirs(path, exist_ok=exist_ok)
 
-    def list_files(self, path: str, pattern: str = "*") -> List[str]:
+    def list_files(self, path: str, pattern: str = "*") -> list[str]:
         """List files matching pattern."""
         path_obj = Path(path)
         if not path_obj.exists():

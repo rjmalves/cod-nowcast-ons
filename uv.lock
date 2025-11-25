@@ -434,12 +434,8 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-xdist" },
-    { name = "scipy" },
-]
-
-[package.dev-dependencies]
-dev = [
     { name = "ruff" },
+    { name = "scipy" },
 ]
 
 [package.metadata]
@@ -463,15 +459,13 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.8.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "requests", specifier = ">=2.32.4" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.6" },
     { name = "s3fs", specifier = ">=2024.10.0" },
     { name = "scipy", marker = "extra == 'dev'", specifier = ">=1.16.3" },
     { name = "statsmodels", specifier = ">=0.14.5" },
     { name = "xarray", specifier = ">=2025.7.1" },
 ]
 provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.14.6" }]
 
 [[package]]
 name = "colorama"

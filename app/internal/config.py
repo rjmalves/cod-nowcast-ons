@@ -60,7 +60,7 @@ class Config:
 
     @classmethod
     def from_json(cls, json_path: str) -> "Config":
-        with open(json_path, "r") as f:
+        with open(json_path) as f:
             config = pyjson5.decode(f.read())
 
         return cls.parse(config)

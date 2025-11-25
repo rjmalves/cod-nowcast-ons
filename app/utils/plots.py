@@ -103,7 +103,7 @@ def render_cod_forecast_frame(
     plt.cla()
     plt.close()
     plt.figure(figsize=[p / rcParams["figure.dpi"] for p in figsize_pixels])
-    ax = plt.axes(projection=ccrs.PlateCarree())
+    ax = plt.axes(projection=ccrs.PlateCarree())  # type: ignore[assignment]
 
     minlon = cod_forecast.longitude.min().item()
     maxlon = cod_forecast.longitude.max().item()
@@ -111,11 +111,11 @@ def render_cod_forecast_frame(
     maxlat = cod_forecast.latitude.max().item()
 
     grid_lat, grid_lon = np.mgrid[
-        minlat : maxlat : complex(cod_forecast.latitude.values.shape[0] + 1),
-        minlon : maxlon : complex(cod_forecast.longitude.values.shape[0] + 1),
+        minlat : maxlat : complex(0, cod_forecast.latitude.values.shape[0] + 1),  # type: ignore[misc]
+        minlon : maxlon : complex(0, cod_forecast.longitude.values.shape[0] + 1),  # type: ignore[misc]
     ]
 
-    ax.set_extent([minlon, maxlon, minlat, maxlat], ccrs.PlateCarree())
+    ax.set_extent([minlon, maxlon, minlat, maxlat], ccrs.PlateCarree())  # type: ignore[attr-defined]
 
     img = ax.pcolormesh(
         grid_lon,
@@ -137,7 +137,7 @@ def render_cod_forecast_frame(
     y_grid = grid_lat[skip]
     plt.quiver(x_grid, y_grid, U, V, width=0.0015, zorder=20)
 
-    ax.add_geometries(
+    ax.add_geometries(  # type: ignore[attr-defined]
         shapefile,
         ccrs.PlateCarree(),
         edgecolor="black",
@@ -146,11 +146,11 @@ def render_cod_forecast_frame(
         zorder=30,
     )
 
-    ax.coastlines(resolution="10m", color="black", linewidth=0.8, zorder=30)
-    ax.add_feature(
+    ax.coastlines(resolution="10m", color="black", linewidth=0.8, zorder=30)  # type: ignore[attr-defined]
+    ax.add_feature(  # type: ignore[attr-defined]
         cartopy.feature.BORDERS, edgecolor="black", linewidth=0.5, zorder=30
     )
-    gl = ax.gridlines(
+    gl = ax.gridlines(  # type: ignore[attr-defined]
         crs=ccrs.PlateCarree(),
         color="black",
         alpha=1.0,
@@ -268,7 +268,7 @@ def generate_cod_forecast_gif(
     if hasattr(storage, "s3_client"):
         temp_gif = tempfile.NamedTemporaryFile(suffix=".gif", delete=False)
         animation_fig.save(temp_gif.name)
-        with open(temp_gif.name, "rb") as f:
+        with open(temp_gif.name, "rb") as f:  # type: ignore[assignment]
             storage.write_bytes(f.read(), output_gif_filename)
         os.unlink(temp_gif.name)
 
