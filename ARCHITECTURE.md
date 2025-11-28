@@ -4,16 +4,16 @@ Este documento descreve a arquitetura do `cod-nowcast-ons`, incluindo o fluxo de
 
 ## Visão Geral
 
-O sistema implementa um pipeline de nowcasting de Cloud Optical Depth (COD) baseado em dados de satélite GOES. Utiliza técnicas de fluxo óptico para estimar movimento de nuvens e extrapolação Lagrangiana para gerar previsões de curto prazo (0-60 minutos).
+O sistema implementa um pipeline de nowcasting de Cloud Optical Depth (COD) baseado em dados de satélite GOES. Utiliza técnicas de fluxo óptico para estimar movimento de nuvens e extrapolação Lagrangiana para gerar previsões de curto prazo (~60 minutos).
 
 ## Diagrama de Fluxo
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                              ENTRADA DE DADOS                              │
-├─────────────────────────────────────────────────────────────────────────────┤
+├────────────────────────────────────────────────────────────────────────────┤
 │  Parquet Files: GOES_COD_BR_YYYYMMDD-HHMM.parquet                          │
-│  Colunas: latitude, longitude, cod                                         │
+│  Colunas: time, latitude, longitude, cod                                   │
 │  Fonte: Local filesystem ou S3                                             │
 └────────────────────────────────────┬───────────────────────────────────────┘
                                      │
@@ -26,7 +26,7 @@ O sistema implementa um pipeline de nowcasting de Cloud Optical Depth (COD) base
 │  ├─ input: path ou s3://bucket/prefix                                      │
 │  ├─ output: path ou s3://bucket/prefix                                     │
 │  ├─ base_datetime: ISO 8601                                                │
-│  ├─ num_past_samples: histórico para motion estimation                     │
+│  ├─ num_past_samples: histórico para cálculo do campo de movimento         │
 │  ├─ num_future_samples: lead times da previsão                             │
 │  ├─ subgrids[]: regiões geográficas                                        │
 │  └─ postprocessing.plots: gerar visualizações                              │
@@ -250,8 +250,8 @@ output/
 ├── cod.parquet                    # Previsões consolidadas
 └── plots/
     ├── SE_forecast.gif            # Animação por subgrid
-    ├── 0000.png                   # Frames individuais
-    ├── 0001.png
+    ├── SE_0000.png                # Frames individuais
+    ├── SE_0001.png
     └── ...
 ```
 
@@ -284,13 +284,6 @@ output/
 - Facilita testes (mock S3)
 - Permite extensão para outros backends (GCS, Azure Blob)
 - Configuração única via URI
-
-### Por que subgrids?
-
-- Processamento paralelo por região
-- Reduz consumo de memória
-- Permite configuração específica por área
-- Isolamento de falhas
 
 ## Extensibilidade
 
@@ -359,9 +352,3 @@ boto3 (>= 1.35.0)
 - Lazy loading onde possível
 - Processamento por subgrid para reduzir memória
 - Reutilização de motion field entre subgrids (se aplicável)
-
-### Otimizações Futuras
-
-- Paralelização de subgrids com multiprocessing
-- Cache de motion fields para re-runs
-- Suporte a GPU via cupy/dask (se pySTEPS suportar)

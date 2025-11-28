@@ -9,4 +9,4 @@ Density (COD) forecasts to be used for generating cloudy-sky irradiance
 predictions through radiation transfer models.
 """
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"

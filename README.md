@@ -8,7 +8,7 @@
 
 **Nowcasting de Cloud Optical Depth usando imagens do satélite GOES e extrapolação baseada em fluxo óptico**
 
-`cod-nowcast-ons` é uma ferramenta especializada de nowcasting para Cloud Optical Depth (COD) derivado de dados do satélite GOES. Fornece previsões de curto prazo (até ~60 minutos) aplicando técnicas de detecção de movimento por fluxo óptico e extrapolação da biblioteca [pySTEPS](https://pysteps.readthedocs.io/) em propriedades de nuvens derivadas de satélite.
+`cod-nowcast-ons` é uma ferramenta especializada de nowcasting para Cloud Optical Depth (COD) derivado de dados do satélite GOES. Fornece previsões de curto prazo aplicando técnicas de detecção de movimento por fluxo óptico e extrapolação da biblioteca [pySTEPS](https://pysteps.readthedocs.io/) em propriedades de nuvens derivadas de satélite.
 
 Desenvolvido pelo [Operador Nacional do Sistema Elétrico (ONS)](https://www.ons.org.br/) para uso em previsão de geração solar fotovoltaica.
 
@@ -48,7 +48,7 @@ Este projeto implementa um pipeline de nowcasting que:
 │                         ESTIMAÇÃO DE MOVIMENTO                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │ Lucas-Kanade Optical Flow (pySTEPS)                                  │  │
-│  │ Entrada: N frames históricos → Saída: Campo de velocidade (U, V)    │  │
+│  │ Entrada: N frames históricos → Saída: Campo de velocidade (U, V)     │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────┬───────────────────────────────────────┘
                                      │
@@ -65,22 +65,22 @@ Este projeto implementa um pipeline de nowcasting que:
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                              SAÍDA                                         │
 ├─────────────────┬──────────────────────────────────────────────────────────┤
-│ Previsões COD   │ Parquet: cod.parquet (time, lat, lon, cod)               │
+│ Previsões COD   │ Parquet: cod.parquet (times, latitude, longitude, value) │
 │ Visualizações   │ GIF animado + frames PNG (opcional)                      │
 └─────────────────┴──────────────────────────────────────────────────────────┘
 ```
 
 ### Componentes Principais
 
-| Módulo | Descrição |
-|--------|-----------|
-| `main.py` | Entry point e CLI |
-| `app/inference.py` | Pipeline de inferência |
+| Módulo                                  | Descrição                                    |
+| --------------------------------------- | -------------------------------------------- |
+| `main.py`                               | Entry point e CLI                            |
+| `app/inference.py`                      | Pipeline de inferência                       |
 | `app/services/cloud_motion_forecast.py` | Algoritmos de nowcasting (LK + extrapolação) |
-| `app/readers.py` | Leitura de dados COD |
-| `app/writers.py` | Escrita de resultados |
-| `app/storage/` | Abstração de storage (local/S3) |
-| `app/utils/plots.py` | Geração de visualizações |
+| `app/readers.py`                        | Leitura de dados COD                         |
+| `app/writers.py`                        | Escrita de resultados                        |
+| `app/storage/`                          | Abstração de storage (local/S3)              |
+| `app/utils/plots.py`                    | Geração de visualizações                     |
 
 ---
 
@@ -145,8 +145,8 @@ docker run -v $(pwd)/data:/app/data -v $(pwd)/config.jsonc:/app/config.jsonc \
 cod-nowcast-ons --config <ARQUIVO_CONFIG>
 ```
 
-| Argumento | Descrição | Default |
-|-----------|-----------|---------|
+| Argumento  | Descrição                                  | Default     |
+| ---------- | ------------------------------------------ | ----------- |
 | `--config` | Caminho para arquivo de configuração JSONC | Obrigatório |
 
 ### Arquivo de Configuração (`config.jsonc`)
@@ -155,20 +155,20 @@ cod-nowcast-ons --config <ARQUIVO_CONFIG>
 {
   // Modo de execução (atualmente apenas "inference")
   "mode": "inference",
-  
+
   // Caminhos de entrada/saída (local ou s3://)
   "input": "data/input",
   "output": "data/output",
-  
+
   // Data/hora base da previsão (ISO 8601)
   "base_datetime": "2024-08-01T10:00:00",
-  
+
   // Número de amostras históricas para motion estimation
   "num_past_samples": 6,
-  
+
   // Número de lead times de previsão (cada um = 10 min)
   "num_future_samples": 6,
-  
+
   // Regiões geográficas para processamento
   "subgrids": [
     {
@@ -177,7 +177,7 @@ cod-nowcast-ons --config <ARQUIVO_CONFIG>
       "lon": [-53.0, -35.0]
     }
   ],
-  
+
   // Opções de pós-processamento
   "postprocessing": {
     "plots": true
@@ -202,16 +202,38 @@ cod-nowcast-ons --config config.jsonc
 
 ### Formato dos Arquivos
 
-| Arquivo | Formato | Descrição |
-|---------|---------|-----------|
+| Arquivo                             | Formato | Descrição               |
+| ----------------------------------- | ------- | ----------------------- |
 | `GOES_COD_BR_YYYYMMDD-HHMM.parquet` | Parquet | Dados COD por timestamp |
 
 ### Schema de Entrada
 
 ```
-latitude    float64   Latitude em graus decimais
-longitude   float64   Longitude em graus decimais
-cod         float64   Cloud Optical Depth
+time        datetime[UTC]  Instante de aquisição da imagem
+latitude    float64        Latitude em graus decimais
+longitude   float64        Longitude em graus decimais
+cod         float64        Cloud Optical Depth
+```
+
+### Exemplo
+```
+┌────────────────────────────────┬──────────┬───────────┬──────────┐
+│ time                           ┆ latitude ┆ longitude ┆ cod      │
+│ ---                            ┆ ---      ┆ ---       ┆ ---      │
+│ datetime[μs, UTC]              ┆ f64      ┆ f64       ┆ f32      │
+╞════════════════════════════════╪══════════╪═══════════╪══════════╡
+│ 2024-08-01 00:00:20.773033 UTC ┆ -40.0    ┆ -80.0     ┆ NaN      │
+│ 2024-08-01 00:00:20.773033 UTC ┆ -40.0    ┆ -79.96    ┆ NaN      │
+│ 2024-08-01 00:00:20.773033 UTC ┆ -40.0    ┆ -79.92    ┆ NaN      │
+│ 2024-08-01 00:00:20.773033 UTC ┆ -40.0    ┆ -79.88    ┆ NaN      │
+│ 2024-08-01 00:00:20.773033 UTC ┆ -40.0    ┆ -79.84    ┆ NaN      │
+│ …                              ┆ …        ┆ …         ┆ …        │
+│ 2024-08-01 00:00:20.773033 UTC ┆ 10.0     ┆ -30.16    ┆ 7.223562 │
+│ 2024-08-01 00:00:20.773033 UTC ┆ 10.0     ┆ -30.12    ┆ 6.842261 │
+│ 2024-08-01 00:00:20.773033 UTC ┆ 10.0     ┆ -30.08    ┆ 7.985351 │
+│ 2024-08-01 00:00:20.773033 UTC ┆ 10.0     ┆ -30.04    ┆ 6.811799 │
+│ 2024-08-01 00:00:20.773033 UTC ┆ 10.0     ┆ -30.0     ┆ 6.366376 │
+└────────────────────────────────┴──────────┴───────────┴──────────┘
 ```
 
 ### Requisitos
@@ -228,19 +250,20 @@ cod         float64   Cloud Optical Depth
 
 **Arquivo**: `<output>/cod.parquet`
 
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| `time` | datetime | Tempo válido da previsão |
-| `latitude` | float | Latitude em graus decimais |
-| `longitude` | float | Longitude em graus decimais |
-| `cod` | float | COD previsto |
+| Coluna              | Tipo     | Descrição                    |
+| ------------------- | -------- | -----------------------------|
+| `data_hora_rodada`  | datetime | Data de referência da rodada |
+| `data_hora_previsao`| datetime | Tempo válido da previsão     |
+| `latitude`          | float    | Latitude em graus decimais   |
+| `longitude`         | float    | Longitude em graus decimais  |
+| `valor`             | float    | COD previsto                 |
 
 ### Visualizações
 
 **Diretório**: `<output>/plots/`
 
 - `<subgrid>_forecast.gif` - Animação da previsão
-- `*.png` - Frames individuais com vetores de movimento
+- `<subgrid>_*.png` - Frames individuais com vetores de movimento
 
 ---
 
@@ -249,6 +272,7 @@ cod         float64   Cloud Optical Depth
 ### Lucas-Kanade Optical Flow
 
 Estima campo de movimento entre frames consecutivos assumindo:
+
 - Constância de brilho: intensidades permanecem constantes
 - Movimento pequeno: deslocamento entre frames é limitado
 - Coerência espacial: pixels vizinhos têm movimento similar
@@ -263,38 +287,9 @@ $$
 
 ### Limitações
 
-- Skill da previsão degrada além de ~60 minutos
+- Acurácia da previsão degrada além de ~60 minutos
 - Não modela ciclo de vida das nuvens (formação/dissipação)
 - Previsão determinística (sem quantificação de incerteza)
-
----
-
-## 📈 Performance
-
-### Métricas de Referência
-
-| Horizonte | MAE (COD) | Condições |
-|-----------|-----------|-----------|
-| 10 min | ~2.5 | Céu parcialmente nublado |
-| 30 min | ~4.0 | Céu parcialmente nublado |
-| 60 min | ~6.5 | Céu parcialmente nublado |
-
-*Nota: Performance varia com condições atmosféricas e região.*
-
-### Comparação com Baselines
-
-- **Persistência**: Assume COD constante → skill score positivo para todos horizontes
-- **Climatologia**: Média histórica → significativamente melhor para curto prazo
-
----
-
-## ⚠️ Limitações Conhecidas
-
-- **Horizonte**: Previsões confiáveis até ~60 minutos
-- **Resolução temporal**: Opera em intervalos de 10 minutos
-- **Fenômenos convectivos**: Performance reduzida em tempestades de rápido desenvolvimento
-- **Dados faltantes**: Regiões com dados ausentes permanecem ausentes na previsão
-- **Fuso horário**: Assume UTC para todas as séries temporais
 
 ---
 
@@ -322,6 +317,7 @@ uv run mypy app/
 ## 🤝 Contribuindo
 
 Contribuições são bem-vindas! Por favor, leia o [CONTRIBUTING.md](CONTRIBUTING.md) para detalhes sobre:
+
 - Configuração do ambiente de desenvolvimento
 - Padrões de código e estilo
 - Processo de submissão de Pull Requests
@@ -366,5 +362,3 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 
 - [pySTEPS](https://pysteps.readthedocs.io/) - Framework Python para sistemas de previsão de curto prazo
 - [GOES Satellite Program](https://www.goes.noaa.gov/) - Imagens do satélite geoestacionário
-
-
