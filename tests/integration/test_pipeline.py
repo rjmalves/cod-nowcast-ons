@@ -40,7 +40,9 @@ class TestFullPipeline:
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
+            postprocessing=PostprocessingConfig(
+                plots=False, shapefile_path=None
+            ),
         )
 
         # Run pipeline
@@ -109,7 +111,9 @@ class TestFullPipeline:
                     lon=[-48.5, -47.0],
                 ),
             ],
-            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
+            postprocessing=PostprocessingConfig(
+                plots=False, shapefile_path=None
+            ),
         )
 
         # Run
@@ -131,7 +135,9 @@ class TestFullPipeline:
         assert len(df) > 0
 
     @pytest.mark.plotting
-    def test_pipeline_with_plots(self, test_data_dir, temp_output_dir, test_shapefile_path):
+    def test_pipeline_with_plots(
+        self, test_data_dir, temp_output_dir, test_shapefile_path
+    ):
         """Test pipeline with plot generation enabled."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
         if len(test_files) < 5:
@@ -204,7 +210,9 @@ class TestPipelineErrorHandling:
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
+            postprocessing=PostprocessingConfig(
+                plots=False, shapefile_path=None
+            ),
         )
 
         reader = InputData(config.input)
@@ -240,7 +248,9 @@ class TestPipelineErrorHandling:
                     lon=[-10.0, -5.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
+            postprocessing=PostprocessingConfig(
+                plots=False, shapefile_path=None
+            ),
         )
 
         reader = InputData(config.input)
@@ -285,7 +295,9 @@ class TestPipelinePerformance:
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
+            postprocessing=PostprocessingConfig(
+                plots=False, shapefile_path=None
+            ),
         )
 
         # Time the pipeline

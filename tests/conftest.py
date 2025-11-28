@@ -21,7 +21,13 @@ def test_data_dir() -> Path:
 @pytest.fixture
 def test_shapefile_path() -> Path:
     """Path to test shapefile for plotting tests."""
-    return Path(__file__).parent / "fixtures" / "data" / "shapes" / "test_shapes.shp"
+    return (
+        Path(__file__).parent
+        / "fixtures"
+        / "data"
+        / "shapes"
+        / "test_shapes.shp"
+    )
 
 
 @pytest.fixture
@@ -142,14 +148,12 @@ def sample_parquet_data() -> pl.DataFrame:
     # Create timestamp
     timestamp = datetime(2024, 8, 1, 0, 0)
 
-    return pl.DataFrame(
-        {
-            "time": [timestamp] * len(lat_flat),
-            "latitude": lat_flat,
-            "longitude": lon_flat,
-            "cod": cod_flat,
-        }
-    )
+    return pl.DataFrame({
+        "time": [timestamp] * len(lat_flat),
+        "latitude": lat_flat,
+        "longitude": lon_flat,
+        "cod": cod_flat,
+    })
 
 
 @pytest.fixture

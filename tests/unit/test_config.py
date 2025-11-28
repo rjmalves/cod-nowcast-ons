@@ -50,7 +50,8 @@ class TestPostprocessingConfig:
     def test_parse_with_shapefile(self):
         """Test parsing with shapefile_path."""
         config = PostprocessingConfig.parse({
-            "plots": True, "shapefile_path": "data/shapes/test.shp"
+            "plots": True,
+            "shapefile_path": "data/shapes/test.shp",
         })
         assert config.plots is True
         assert config.shapefile_path == "data/shapes/test.shp"
