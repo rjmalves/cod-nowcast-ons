@@ -148,12 +148,14 @@ def sample_parquet_data() -> pl.DataFrame:
     # Create timestamp
     timestamp = datetime(2024, 8, 1, 0, 0)
 
-    return pl.DataFrame({
-        "time": [timestamp] * len(lat_flat),
-        "latitude": lat_flat,
-        "longitude": lon_flat,
-        "cod": cod_flat,
-    })
+    return pl.DataFrame(
+        {
+            "time": [timestamp] * len(lat_flat),
+            "latitude": lat_flat,
+            "longitude": lon_flat,
+            "cod": cod_flat,
+        }
+    )
 
 
 @pytest.fixture
