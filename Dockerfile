@@ -45,6 +45,7 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y \
     libgeos-c1v5 \
     libproj25 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user

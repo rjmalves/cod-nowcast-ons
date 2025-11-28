@@ -1,8 +1,12 @@
+import warnings
 from datetime import datetime, timedelta
 
 import numpy as np
 import xarray as xr
-from pysteps import motion, nowcasts  # type: ignore
+
+warnings.simplefilter("ignore", SyntaxWarning)
+
+from pysteps import motion, nowcasts  # type: ignore # noqa: E402
 
 
 class CloudMotionForecast:
