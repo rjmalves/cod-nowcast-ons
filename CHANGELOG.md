@@ -20,7 +20,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
-## [1.0.0] - 2025-11-28
+## [0.1.0] - 2025-11-28
 
 ### Added
 
