@@ -27,6 +27,9 @@
     ],
     // Postprocessing options
     "postprocessing": {
-        "plots": true
+        "plots": true,
+        // Optional: Path to shapefile for additional borders/outlines in plots.
+        // If not provided, only Cartopy's built-in coastlines and country borders are used.
+        "shapefile_path": "data/shapes/BR_UF_2022.shp"
     }
 }

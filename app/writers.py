@@ -53,5 +53,6 @@ def write_cloud_motion_plots(
             ),
             image_prefix=subgrid_name,
             keep_frames=True,
+            shapefile_path=config.postprocessing.shapefile_path,
             storage=storage,
         )

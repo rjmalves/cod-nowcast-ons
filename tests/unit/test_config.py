@@ -34,16 +34,26 @@ class TestPostprocessingConfig:
         """Test parsing with plots enabled."""
         config = PostprocessingConfig.parse({"plots": True})
         assert config.plots is True
+        assert config.shapefile_path is None
 
     def test_parse_default(self):
         """Test parsing with missing plots key."""
         config = PostprocessingConfig.parse({})
         assert config.plots is False
+        assert config.shapefile_path is None
 
     def test_parse_false(self):
         """Test parsing with plots explicitly false."""
         config = PostprocessingConfig.parse({"plots": False})
         assert config.plots is False
+
+    def test_parse_with_shapefile(self):
+        """Test parsing with shapefile_path."""
+        config = PostprocessingConfig.parse({
+            "plots": True, "shapefile_path": "data/shapes/test.shp"
+        })
+        assert config.plots is True
+        assert config.shapefile_path == "data/shapes/test.shp"
 
 
 class TestConfig:

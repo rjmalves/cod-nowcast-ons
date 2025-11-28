@@ -180,10 +180,25 @@ cod-nowcast-ons --config <ARQUIVO_CONFIG>
 
   // Opções de pós-processamento
   "postprocessing": {
-    "plots": true
+    "plots": true,
+    // Opcional: caminho para shapefile com contornos adicionais
+    "shapefile_path": "data/shapes/BR_UF_2022.shp"
   }
 }
 ```
+
+### Shapefiles para Visualizações
+
+Quando `plots` está habilitado, as visualizações incluem automaticamente linhas costeiras e fronteiras de países usando Cartopy. Para adicionar contornos personalizados (ex: estados brasileiros), forneça um arquivo shapefile:
+
+1. Coloque os arquivos shapefile em `data/shapes/` (ou outro diretório)
+2. Configure `shapefile_path` no `config.jsonc`
+
+**Exemplo para estados brasileiros:**
+- Baixe o shapefile BR_UF_2022 do IBGE
+- Configure: `"shapefile_path": "data/shapes/BR_UF_2022.shp"`
+
+**Nota:** Se `shapefile_path` não for fornecido, as visualizações usarão apenas os contornos padrão do Cartopy (linhas costeiras e fronteiras internacionais).
 
 ### Variáveis de Ambiente (S3)
 

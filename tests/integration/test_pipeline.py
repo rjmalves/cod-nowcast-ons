@@ -40,7 +40,7 @@ class TestFullPipeline:
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False),
+            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
         )
 
         # Run pipeline
@@ -109,7 +109,7 @@ class TestFullPipeline:
                     lon=[-48.5, -47.0],
                 ),
             ],
-            postprocessing=PostprocessingConfig(plots=False),
+            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
         )
 
         # Run
@@ -131,7 +131,7 @@ class TestFullPipeline:
         assert len(df) > 0
 
     @pytest.mark.plotting
-    def test_pipeline_with_plots(self, test_data_dir, temp_output_dir):
+    def test_pipeline_with_plots(self, test_data_dir, temp_output_dir, test_shapefile_path):
         """Test pipeline with plot generation enabled."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
         if len(test_files) < 5:
@@ -142,7 +142,7 @@ class TestFullPipeline:
         time_str = last_file.stem.split("_")[-1]
         base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
 
-        # Config with plots enabled
+        # Config with plots enabled and test shapefile
         config = Config(
             mode="inference",
             input=str(test_data_dir),
@@ -157,7 +157,9 @@ class TestFullPipeline:
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=True),
+            postprocessing=PostprocessingConfig(
+                plots=True, shapefile_path=str(test_shapefile_path)
+            ),
         )
 
         # Run inference
@@ -202,7 +204,7 @@ class TestPipelineErrorHandling:
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False),
+            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
         )
 
         reader = InputData(config.input)
@@ -238,7 +240,7 @@ class TestPipelineErrorHandling:
                     lon=[-10.0, -5.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False),
+            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
         )
 
         reader = InputData(config.input)
@@ -283,7 +285,7 @@ class TestPipelinePerformance:
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(plots=False),
+            postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
         )
 
         # Time the pipeline

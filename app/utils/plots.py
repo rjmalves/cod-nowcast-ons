@@ -75,7 +75,7 @@ def render_cod_forecast_frame(
     figsize_pixels: tuple = (720, 720),
     image_output_dir: str = "steps",
     image_prefix: str = "frame",
-    shapefile_path: str = "data/shapes/BR_UF_2022.shp",
+    shapefile_path: str | None = None,
     storage: StorageBackend | None = None,
 ) -> str:
     """Render a single COD forecast frame and save it to disk.
@@ -85,7 +85,8 @@ def render_cod_forecast_frame(
         motion_field: 2xHxW motion field (U,V) from pysteps.
         step: Frame index (time dimension index) to render.
         image_output_dir: Directory where the frame image will be saved.
-        shapefile_path: Path to the shapefile for borders/outlines.
+        shapefile_path: Optional path to shapefile for additional borders/outlines.
+            If not provided, only Cartopy's built-in coastlines and borders are used.
         storage: Storage backend to use (defaults to LocalBackend).
 
     Returns:
@@ -98,7 +99,9 @@ def render_cod_forecast_frame(
 
     cmap, norm = _cod_colormap_and_norm()
 
-    shapefile = list(shpreader.Reader(shapefile_path).geometries())
+    shapefile = None
+    if shapefile_path:
+        shapefile = list(shpreader.Reader(shapefile_path).geometries())
 
     plt.cla()
     plt.close()
@@ -139,14 +142,15 @@ def render_cod_forecast_frame(
     y_grid = grid_lat[skip]
     plt.quiver(x_grid, y_grid, U, V, width=0.0015, zorder=20)
 
-    ax.add_geometries(  # type: ignore[attr-defined]
-        shapefile,
-        ccrs.PlateCarree(),
-        edgecolor="black",
-        facecolor="none",
-        linewidth=0.3,
-        zorder=30,
-    )
+    if shapefile:
+        ax.add_geometries(  # type: ignore[attr-defined]
+            shapefile,
+            ccrs.PlateCarree(),
+            edgecolor="black",
+            facecolor="none",
+            linewidth=0.3,
+            zorder=30,
+        )
 
     ax.coastlines(resolution="10m", color="black", linewidth=0.8, zorder=30)  # type: ignore[attr-defined]
     ax.add_feature(  # type: ignore[attr-defined]
@@ -200,12 +204,26 @@ def generate_cod_forecast_gif(
     image_output_dir: str = "steps",
     image_prefix: str = "frame",
     keep_frames: bool = False,
+    shapefile_path: str | None = None,
     storage: StorageBackend | None = None,
 ) -> None:
     """Generate an animated GIF from COD forecast and motion field.
 
     This renders frame images using render_cod_forecast_frame and then composes
     them into an animated GIF.
+
+    Args:
+        cod_forecast: 3D DataArray with dims (latitude, longitude, time).
+        motion_field: 2xHxW motion field (U,V) from pysteps.
+        figsize_pixels: Figure size in pixels (width, height).
+        output_gif_filename: Output filename for the GIF.
+        frame_interval_ms: Interval between frames in milliseconds.
+        repeat_delay_ms: Delay before repeating animation in milliseconds.
+        image_output_dir: Directory where frame images will be saved.
+        image_prefix: Prefix for frame image filenames.
+        keep_frames: Whether to keep individual frame images after GIF creation.
+        shapefile_path: Optional path to shapefile for additional borders/outlines.
+        storage: Storage backend to use (defaults to LocalBackend).
     """
     if storage is None:
         storage = LocalBackend()
@@ -225,6 +243,7 @@ def generate_cod_forecast_gif(
                 figsize_pixels=figsize_pixels,
                 image_output_dir=image_output_dir,
                 image_prefix=image_prefix,
+                shapefile_path=shapefile_path,
                 storage=storage,
             )
         )

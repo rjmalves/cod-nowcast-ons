@@ -212,12 +212,17 @@ __marimo__/
 *.csv
 *.html
 
-# Shapefiles
+# Shapefiles (except test fixtures)
 *.cpg
 *.dbf
 *.prj
 *.shp
 *.shx
+!tests/fixtures/**/*.cpg
+!tests/fixtures/**/*.dbf
+!tests/fixtures/**/*.prj
+!tests/fixtures/**/*.shp
+!tests/fixtures/**/*.shx
 
 # Data
 data/*

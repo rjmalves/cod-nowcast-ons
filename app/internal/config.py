@@ -22,11 +22,13 @@ class SubgridConfig:
 @dataclass
 class PostprocessingConfig:
     plots: bool
+    shapefile_path: str | None
 
     @classmethod
     def parse(cls, config: dict) -> "PostprocessingConfig":
         return cls(
             plots=config.get("plots", False),
+            shapefile_path=config.get("shapefile_path"),
         )
 
 

@@ -19,6 +19,12 @@ def test_data_dir() -> Path:
 
 
 @pytest.fixture
+def test_shapefile_path() -> Path:
+    """Path to test shapefile for plotting tests."""
+    return Path(__file__).parent / "fixtures" / "data" / "shapes" / "test_shapes.shp"
+
+
+@pytest.fixture
 def temp_output_dir() -> Generator[Path, None, None]:
     """Temporary directory for test outputs."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -52,7 +58,7 @@ def sample_config(test_data_dir: Path, temp_output_dir: Path) -> Config:
                 lon=[-50.0, -47.0],
             )
         ],
-        postprocessing=PostprocessingConfig(plots=False),
+        postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
     )
 
 
