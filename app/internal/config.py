@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 import pyjson5
 
@@ -11,7 +12,7 @@ class SubgridConfig:
     lon: list[float]
 
     @classmethod
-    def parse(cls, subgrid_dict: dict) -> "SubgridConfig":
+    def parse(cls, subgrid_dict: dict[str, Any]) -> "SubgridConfig":
         return cls(
             name=subgrid_dict["name"],
             lat=subgrid_dict["lat"],
@@ -25,7 +26,7 @@ class PostprocessingConfig:
     shapefile_path: str | None
 
     @classmethod
-    def parse(cls, config: dict) -> "PostprocessingConfig":
+    def parse(cls, config: dict[str, Any]) -> "PostprocessingConfig":
         return cls(
             plots=config.get("plots", False),
             shapefile_path=config.get("shapefile_path"),
@@ -44,7 +45,7 @@ class Config:
     postprocessing: PostprocessingConfig
 
     @classmethod
-    def parse(cls, config: dict) -> "Config":
+    def parse(cls, config: dict[str, Any]) -> "Config":
         return cls(
             mode=config["mode"],
             input=config["input"],

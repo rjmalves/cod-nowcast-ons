@@ -19,7 +19,7 @@ def load_config(config_path: str) -> Config:
     return Config.from_json(config_path)
 
 
-def main():
+def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 

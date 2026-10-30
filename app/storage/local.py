@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -10,11 +11,11 @@ from .base import StorageBackend
 class LocalBackend(StorageBackend):
     """Local filesystem storage backend."""
 
-    def read_parquet(self, path: str, **kwargs) -> pl.LazyFrame:
+    def read_parquet(self, path: str, **kwargs: Any) -> pl.LazyFrame:
         """Read Parquet from local filesystem using Polars."""
         return pl.scan_parquet(path, **kwargs)
 
-    def write_parquet(self, df: pd.DataFrame, path: str, **kwargs) -> None:
+    def write_parquet(self, df: pd.DataFrame, path: str, **kwargs: Any) -> None:
         """Write Parquet to local filesystem using Pandas."""
         df.to_parquet(path, **kwargs)
 

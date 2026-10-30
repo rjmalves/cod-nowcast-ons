@@ -80,13 +80,13 @@ def create_small_test_dataset(
     print(f"  Unique latitudes: {df_sample['latitude'].n_unique()}")
     print(f"  Unique longitudes: {df_sample['longitude'].n_unique()}")
     print(
-        f"  COD range: [{df_sample['cod'].min():.2f}, {df_sample['cod'].max():.2f}]"
+        f"  COD range: [{df_sample['cod'].min():.2f}, {df_sample['cod'].max():.2f}]"  # type: ignore[str-bytes-safe]  # polars types Series.min/max as any literal; cod is Float
     )
-    print(f"  COD mean: {df_sample['cod'].mean():.2f}")
+    print(f"  COD mean: {df_sample['cod'].mean():.2f}")  # type: ignore[str-bytes-safe]  # polars types Series.mean as any literal; cod is Float
     print(f"  Missing values: {df_sample['cod'].null_count()}")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate test fixtures from GOES COD data"
     )

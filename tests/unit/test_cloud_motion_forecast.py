@@ -8,7 +8,7 @@ from app.services.cloud_motion_forecast import CloudMotionForecast
 class TestCloudMotionForecast:
     """Test CloudMotionForecast service."""
 
-    def test_initialization(self, sample_cod_dataarray):
+    def test_initialization(self, sample_cod_dataarray: xr.DataArray) -> None:
         """Test CloudMotionForecast initialization."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         assert forecast.cod is sample_cod_dataarray
@@ -16,7 +16,9 @@ class TestCloudMotionForecast:
         assert forecast.MOTION_FIELD_METHOD == "LK"
         assert forecast.NOWCAST_METHOD == "extrapolation"
 
-    def test_motion_field_shape(self, sample_cod_dataarray):
+    def test_motion_field_shape(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test that motion field has correct shape."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         cod_array = np.array(sample_cod_dataarray)
@@ -28,7 +30,9 @@ class TestCloudMotionForecast:
         assert motion.shape[1] == cod_array.shape[1]  # height
         assert motion.shape[2] == cod_array.shape[2]  # width
 
-    def test_prepares_forecasting_sample(self, sample_cod_dataarray):
+    def test_prepares_forecasting_sample(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test sample preparation (last timestep, fill NaN)."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         cod_array = np.array(sample_cod_dataarray)
@@ -45,7 +49,9 @@ class TestCloudMotionForecast:
         assert not np.any(np.isnan(sample))
         assert sample[0, 0] == 0.0
 
-    def test_forecast_returns_xarray(self, sample_cod_dataarray):
+    def test_forecast_returns_xarray(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test that forecast returns xarray DataArray."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         result = forecast.forecast(n_leadtimes=3)
@@ -55,7 +61,9 @@ class TestCloudMotionForecast:
         assert "latitude" in result.dims
         assert "longitude" in result.dims
 
-    def test_forecast_correct_dimensions(self, sample_cod_dataarray):
+    def test_forecast_correct_dimensions(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test forecast output dimensions."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         n_leadtimes = 5
@@ -68,7 +76,9 @@ class TestCloudMotionForecast:
         assert result.latitude.size == sample_cod_dataarray.latitude.size
         assert result.longitude.size == sample_cod_dataarray.longitude.size
 
-    def test_forecast_time_progression(self, sample_cod_dataarray):
+    def test_forecast_time_progression(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test that forecast times are correctly spaced."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         result = forecast.forecast(n_leadtimes=3)
@@ -89,7 +99,9 @@ class TestCloudMotionForecast:
         )
         assert diff_first == 10.0
 
-    def test_motion_field_stored(self, sample_cod_dataarray):
+    def test_motion_field_stored(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test that motion field is stored after forecast."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
 
@@ -103,7 +115,9 @@ class TestCloudMotionForecast:
         assert isinstance(forecast.motion_field, np.ndarray)
         assert forecast.motion_field.shape[0] == 2  # U, V components
 
-    def test_forecast_values_are_finite(self, sample_cod_dataarray):
+    def test_forecast_values_are_finite(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test that forecast doesn't produce infinite values."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         result = forecast.forecast(n_leadtimes=3)
@@ -113,7 +127,9 @@ class TestCloudMotionForecast:
         assert not np.any(np.isinf(values))
 
     @pytest.mark.slow
-    def test_forecast_with_many_leadtimes(self, sample_cod_dataarray):
+    def test_forecast_with_many_leadtimes(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test forecast with many lead times (slower)."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         result = forecast.forecast(n_leadtimes=12)  # 2 hours
@@ -123,7 +139,9 @@ class TestCloudMotionForecast:
         time_span = (result.time[-1] - result.time[0]) / np.timedelta64(1, "m")
         assert time_span == 110.0  # 11 * 10 minutes
 
-    def test_forecast_coordinates_preserved(self, sample_cod_dataarray):
+    def test_forecast_coordinates_preserved(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test that spatial coordinates are preserved."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         result = forecast.forecast(n_leadtimes=3)
@@ -136,7 +154,7 @@ class TestCloudMotionForecast:
             result.longitude.values, sample_cod_dataarray.longitude.values
         )
 
-    def test_forecast_with_uniform_field(self):
+    def test_forecast_with_uniform_field(self) -> None:
         """Test forecast with uniform (no motion) field."""
         # Create uniform field (no gradients)
         times = np.arange(6)
@@ -164,7 +182,7 @@ class TestCloudMotionForecast:
 class TestCloudMotionForecastEdgeCases:
     """Test edge cases for CloudMotionForecast."""
 
-    def test_forecast_with_missing_data(self):
+    def test_forecast_with_missing_data(self) -> None:
         """Test forecast with some missing data."""
         times = np.arange(6)
         lats = np.linspace(-23, -20, 10)
@@ -187,7 +205,7 @@ class TestCloudMotionForecastEdgeCases:
         assert result is not None
         assert result.time.size == 3
 
-    def test_forecast_with_small_domain(self):
+    def test_forecast_with_small_domain(self) -> None:
         """Test forecast with very small spatial domain."""
         times = np.arange(6)
         lats = np.linspace(-23, -22.5, 3)  # Only 3 points
@@ -206,7 +224,9 @@ class TestCloudMotionForecastEdgeCases:
 
         assert result.shape == (3, 3, 2)
 
-    def test_forecast_single_leadtime(self, sample_cod_dataarray):
+    def test_forecast_single_leadtime(
+        self, sample_cod_dataarray: xr.DataArray
+    ) -> None:
         """Test forecast with just one lead time."""
         forecast = CloudMotionForecast(sample_cod_dataarray)
         result = forecast.forecast(n_leadtimes=1)

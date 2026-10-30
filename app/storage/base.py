@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 import pandas as pd
 import polars as pl
@@ -8,12 +9,12 @@ class StorageBackend(ABC):
     """Abstract interface for storage operations."""
 
     @abstractmethod
-    def read_parquet(self, path: str, **kwargs) -> pl.LazyFrame:
+    def read_parquet(self, path: str, **kwargs: Any) -> pl.LazyFrame:
         """Read Parquet file and return Polars LazyFrame."""
         pass
 
     @abstractmethod
-    def write_parquet(self, df: pd.DataFrame, path: str, **kwargs) -> None:
+    def write_parquet(self, df: pd.DataFrame, path: str, **kwargs: Any) -> None:
         """Write Pandas DataFrame to Parquet."""
         pass
 

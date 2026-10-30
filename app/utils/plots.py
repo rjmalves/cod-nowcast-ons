@@ -1,16 +1,21 @@
 import os
+from typing import TYPE_CHECKING
 
-import cartopy  # type: ignore
-import cartopy.crs as ccrs  # type: ignore
-import cartopy.io.shapereader as shpreader  # type: ignore
+import cartopy
+import cartopy.crs as ccrs
+import cartopy.io.shapereader as shpreader
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 from matplotlib import colors, rcParams
+from matplotlib.image import AxesImage
 from PIL import Image
 
 from app.storage import LocalBackend, StorageBackend
+
+if TYPE_CHECKING:  # pragma: no cover
+    from cartopy.mpl.geoaxes import GeoAxes
 
 
 def _cod_colormap_and_norm() -> tuple[colors.Colormap, colors.BoundaryNorm]:
@@ -72,7 +77,7 @@ def render_cod_forecast_frame(
     cod_forecast: xr.DataArray,
     motion_field: np.ndarray,
     step: int,
-    figsize_pixels: tuple = (720, 720),
+    figsize_pixels: tuple[int, int] = (720, 720),
     image_output_dir: str = "steps",
     image_prefix: str = "frame",
     shapefile_path: str | None = None,
@@ -106,7 +111,7 @@ def render_cod_forecast_frame(
     plt.cla()
     plt.close()
     plt.figure(figsize=[p / rcParams["figure.dpi"] for p in figsize_pixels])
-    ax = plt.axes(projection=ccrs.PlateCarree())  # type: ignore[assignment]
+    ax: GeoAxes = plt.axes(projection=ccrs.PlateCarree())
 
     minlon = cod_forecast.longitude.min().item()
     maxlon = cod_forecast.longitude.max().item()
@@ -114,13 +119,13 @@ def render_cod_forecast_frame(
     maxlat = cod_forecast.latitude.max().item()
 
     grid_lat, grid_lon = np.mgrid[
-        minlat : maxlat : complex(0, cod_forecast.latitude.values.shape[0] + 1),  # type: ignore[misc]
+        minlat : maxlat : complex(0, cod_forecast.latitude.values.shape[0] + 1),  # type: ignore[misc]  # numpy stubs reject a complex slice step
         minlon : maxlon : complex(
             0, cod_forecast.longitude.values.shape[0] + 1
-        ),  # type: ignore[misc]
+        ),  # type: ignore[misc]  # numpy stubs reject a complex slice step
     ]
 
-    ax.set_extent([minlon, maxlon, minlat, maxlat], ccrs.PlateCarree())  # type: ignore[attr-defined]
+    ax.set_extent([minlon, maxlon, minlat, maxlat], ccrs.PlateCarree())
 
     img = ax.pcolormesh(
         grid_lon,
@@ -143,7 +148,7 @@ def render_cod_forecast_frame(
     plt.quiver(x_grid, y_grid, U, V, width=0.0015, zorder=20)
 
     if shapefile:
-        ax.add_geometries(  # type: ignore[attr-defined]
+        ax.add_geometries(
             shapefile,
             ccrs.PlateCarree(),
             edgecolor="black",
@@ -152,11 +157,11 @@ def render_cod_forecast_frame(
             zorder=30,
         )
 
-    ax.coastlines(resolution="10m", color="black", linewidth=0.8, zorder=30)  # type: ignore[attr-defined]
-    ax.add_feature(  # type: ignore[attr-defined]
+    ax.coastlines(resolution="10m", color="black", linewidth=0.8, zorder=30)
+    ax.add_feature(
         cartopy.feature.BORDERS, edgecolor="black", linewidth=0.5, zorder=30
     )
-    gl = ax.gridlines(  # type: ignore[attr-defined]
+    gl = ax.gridlines(
         crs=ccrs.PlateCarree(),
         color="black",
         alpha=1.0,
@@ -197,7 +202,7 @@ def render_cod_forecast_frame(
 def generate_cod_forecast_gif(
     cod_forecast: xr.DataArray,
     motion_field: np.ndarray,
-    figsize_pixels: tuple = (720, 720),
+    figsize_pixels: tuple[int, int] = (720, 720),
     output_gif_filename: str = "forecast.gif",
     frame_interval_ms: int = 300,
     repeat_delay_ms: int = 700,
@@ -273,8 +278,8 @@ def generate_cod_forecast_gif(
     plt.margins(0, 0)
     im = ax.imshow(images[0], animated=True)
 
-    def update(i):
-        im.set_array(images[i])
+    def update(i: int) -> tuple[AxesImage]:
+        im.set_array(images[i])  # type: ignore[arg-type]  # PIL images expose the array interface
         return (im,)
 
     animation_fig = animation.FuncAnimation(
@@ -289,8 +294,8 @@ def generate_cod_forecast_gif(
     if hasattr(storage, "s3_client"):
         temp_gif = tempfile.NamedTemporaryFile(suffix=".gif", delete=False)
         animation_fig.save(temp_gif.name)
-        with open(temp_gif.name, "rb") as f:  # type: ignore[assignment]
-            storage.write_bytes(f.read(), output_gif_filename)
+        with open(temp_gif.name, "rb") as gif_file:
+            storage.write_bytes(gif_file.read(), output_gif_filename)
         os.unlink(temp_gif.name)
 
         shutil.rmtree(temp_dir)
