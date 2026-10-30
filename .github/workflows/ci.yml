@@ -111,6 +111,12 @@ jobs:
 
   gate:
     runs-on: ubuntu-24.04
+    # Local change to the template, which leaves the denylist opt-in
+    # (L-ADR-032): pushes and pull requests from this repository's branches,
+    # Dependabot's included, fail without it. Fork pull requests get no secrets
+    # and still run the shape rules only.
+    env:
+      REQUIRE_DENYLIST: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && 'yes' || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -125,7 +131,7 @@ jobs:
           NWP_GATE_DENYLIST: ${{ secrets.NWP_GATE_DENYLIST }}
           NWP_GATE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           NWP_GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python3 ci/gate/run_gate.py --mode diff
+        run: python3 ci/gate/run_gate.py --mode diff ${REQUIRE_DENYLIST:+--require-denylist}
 
   image:
     runs-on: ubuntu-24.04
