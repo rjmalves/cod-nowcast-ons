@@ -1,0 +1,82 @@
+# nwp-core-template: gate/gitleaks.toml 0.1.0
+# Identifier rules of the publication gate. Self-contained by design: no
+# [extend] table and no global [allowlist], so no vendor path allowlist applies
+# and run_gate.py can append the nwp-denylist rule. Rule allowlists admit public
+# identifiers by value only, never by path.
+
+title = "nwp-gate identifier rules"
+
+[[rules]]
+id = "nwp-s3-uri"
+description = "S3 URI naming a bucket"
+regex = '''(?i)s3://([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])'''
+secretGroup = 1
+keywords = ["s3://"]
+
+[[rules.allowlists]]
+description = "public and documentation buckets"
+regexes = [
+    '''^(?i:noaa-(?:gefs-pds|goes16|goes18|goes19|cfs-pds))$''',
+    '''^(?i:amzn-s3-demo-bucket|example-bucket|test-bucket)$''',
+]
+
+[[rules]]
+id = "nwp-s3-host"
+description = "virtual-hosted S3 URL naming a bucket"
+regex = '''(?i)\b([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\.s3(?:[.-][a-z0-9.-]+)?\.amazonaws\.com\b'''
+secretGroup = 1
+keywords = ["amazonaws.com"]
+
+[[rules.allowlists]]
+description = "public and documentation buckets"
+regexes = [
+    '''^(?i:noaa-(?:gefs-pds|goes16|goes18|goes19|cfs-pds))$''',
+    '''^(?i:amzn-s3-demo-bucket|example-bucket|test-bucket)$''',
+]
+
+[[rules]]
+id = "nwp-bucket-literal"
+description = "bucket key assigned a quoted bucket name"
+regex = '''(?im)(?:^|\b|[^a-z0-9])bucket(?:_name)?["']?\s*[:=]\s*["']([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])["']'''
+secretGroup = 1
+keywords = ["bucket"]
+
+[[rules.allowlists]]
+description = "public and documentation buckets"
+regexes = [
+    '''^(?i:noaa-(?:gefs-pds|goes16|goes18|goes19|cfs-pds))$''',
+    '''^(?i:amzn-s3-demo-bucket|example-bucket|test-bucket)$''',
+]
+
+[[rules]]
+id = "nwp-arn-account"
+description = "ARN carrying a 12-digit account id"
+regex = '''(?i)\barn:aws[a-z-]*:[a-z0-9-]+:[a-z0-9-]*:([0-9]{12}):'''
+secretGroup = 1
+keywords = ["arn:"]
+
+[[rules.allowlists]]
+description = "documentation account ids"
+regexes = ['''^(?:123456789012|111122223333)$''']
+
+[[rules]]
+id = "nwp-account-id"
+description = "account key assigned a 12-digit id"
+regex = '''(?im)(?:^|\b|[^a-z0-9])(?:aws_?)?account(?:_?id)?["']?\s*[:=]\s*["']?([0-9]{12})\b'''
+secretGroup = 1
+keywords = ["account"]
+
+[[rules.allowlists]]
+description = "documentation account ids"
+regexes = ['''^(?:123456789012|111122223333)$''']
+
+[[rules]]
+id = "nwp-internal-host"
+description = "hostname under an internal-only suffix"
+regex = '''(?im)(?:^|\b|[^a-z0-9.-])((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:internal|corp|intranet|lan|localdomain))\.?(?:[^a-z0-9._-]|$)'''
+secretGroup = 1
+keywords = [".internal", ".corp", ".intranet", ".lan", ".localdomain"]
+
+[[rules.allowlists]]
+description = "reserved documentation domains"
+regexes = ['''(?i)^(?:example|invalid)\.[a-z]+$''']

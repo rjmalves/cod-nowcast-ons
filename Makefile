@@ -1,4 +1,8 @@
-.PHONY: help install install-user uninstall uninstall-user reinstall test test-unit test-integration test-cov test-s3 lint format clean
+.PHONY: help install install-user uninstall uninstall-user reinstall test test-unit test-integration test-cov test-s3 lint format typecheck image smoke gate clean
+
+IMAGE ?= cod-nowcast-ons:local
+IMAGE_SOURCE ?= https://github.com/rjmalves/cod-nowcast-ons
+IMPORT_CHAIN := import cv2, pysteps; from pysteps import motion
 
 help:
 	@echo "cod-nowcast-ons - Installation and Management"
@@ -18,8 +22,14 @@ help:
 	@echo "  make test-s3        - Run S3-specific tests"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  make lint           - Run linter (ruff)"
+	@echo "  make lint           - Run ruff check and ruff format --check"
 	@echo "  make format         - Format code with ruff"
+	@echo "  make typecheck      - Run mypy (strict, from pyproject.toml)"
+	@echo "  make gate           - Scan the commits since main for internal identifiers"
+	@echo ""
+	@echo "Container image:"
+	@echo "  make image          - Build the image as $(IMAGE)"
+	@echo "  make smoke          - Run the CI image checks and fixture nowcast on $(IMAGE)"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean          - Clean build artifacts and cache"
@@ -54,29 +64,52 @@ clean:
 
 test:
 	@echo "Running all tests..."
-	@.venv/bin/pytest -v
+	@uv run --no-sync pytest -v
 
 test-unit:
 	@echo "Running unit tests..."
-	@.venv/bin/pytest tests/unit/ -v
+	@uv run --no-sync pytest tests/unit/ -v
 
 test-integration:
 	@echo "Running integration tests..."
-	@.venv/bin/pytest tests/integration/ -v -m "not slow and not plotting"
+	@uv run --no-sync pytest tests/integration/ -v -m "not slow and not plotting"
 
 test-cov:
 	@echo "Running tests with coverage..."
-	@.venv/bin/pytest --cov=app --cov-report=html --cov-report=term -v
+	@uv run --no-sync pytest --cov=app --cov-report=html --cov-report=term -v
 	@echo "Coverage report generated in htmlcov/"
 
 test-s3:
 	@echo "Running S3-specific tests..."
-	@.venv/bin/pytest -m s3 -v
+	@uv run --no-sync pytest -m s3 -v
 
 lint:
 	@echo "Running linter..."
-	@.venv/bin/ruff check app/ tests/
+	@uv run --no-sync ruff check .
+	@uv run --no-sync ruff format --check .
 
 format:
 	@echo "Formatting code..."
-	@.venv/bin/ruff format app/ tests/
+	@uv run --no-sync ruff format .
+
+typecheck:
+	@echo "Running mypy..."
+	@uv run --no-sync mypy
+
+image:
+	@echo "Building $(IMAGE)..."
+	docker buildx build --load \
+		--secret id=nwp_core_token,env=NWP_CORE_READ_TOKEN \
+		--build-arg IMAGE_SOURCE=$(IMAGE_SOURCE) \
+		-t $(IMAGE) .
+
+smoke:
+	@echo "Checking $(IMAGE)..."
+	python3 ci/check_image.py $(IMAGE) --imports "$(IMPORT_CHAIN)"
+	ci/fixture-nowcast.sh $(IMAGE)
+
+gate:
+	@echo "Scanning the commits since main for internal identifiers..."
+	python3 ci/gate/run_gate.py --provision
+	NWP_GATE_BASE_SHA=$$(git merge-base main HEAD) NWP_GATE_HEAD_SHA=$$(git rev-parse HEAD) \
+		python3 ci/gate/run_gate.py --mode diff
