@@ -1,0 +1,10 @@
+# nwp-core-template: .dockerignore 0.1.0
+# Known limit: everything under app/ is sent, dotfiles and __pycache__
+# included, and the build cannot read .gitignore, so keep app/ free of
+# untracked files before a local build.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!app/
+!main.py

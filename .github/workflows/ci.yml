@@ -1,0 +1,172 @@
+# nwp-core-template: ci.yml 0.1.0
+# Copy to .github/workflows/ci.yml; the scripts and the gate go to ci/, the
+# Dockerfile to the repository root.
+#
+# NWP_CORE_READ_TOKEN is needed only while the repository takes nwp-core from
+# its private git source. The credential helper and the BuildKit secret below
+# work with a fine-grained read-only PAT stored on one line (contents:read on
+# nwp-core only, expiring with the interim window). A GitHub App token or a
+# read-only deploy key is acceptable only with extra steps this template does
+# not have: a step that mints the App token, or ssh-agent and `--ssh` plus a
+# Dockerfile `--mount=type=ssh` and an `ssh://` source in uv.lock. Never a
+# classic PAT and never GITHUB_TOKEN. Without the token a repository that
+# depends on nwp-core fails at git authentication.
+#
+# Known limit: build backends are not locked and run while the token is in the
+# environment of the sync and image build steps.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version-file: pyproject.toml
+          enable-cache: false
+      - name: sync
+        env:
+          NWP_CORE_READ_TOKEN: ${{ secrets.NWP_CORE_READ_TOKEN }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.https://github.com.helper
+          GIT_CONFIG_VALUE_0: '!f() { if [ -n "$NWP_CORE_READ_TOKEN" ]; then echo username=x-access-token; echo "password=$NWP_CORE_READ_TOKEN"; fi; }; f'
+        run: uv sync --locked --all-extras --all-groups
+      - name: ruff check
+        run: uv run --no-sync ruff check .
+      - name: ruff format
+        run: uv run --no-sync ruff format --check .
+      - name: mypy
+        run: uv run --no-sync mypy
+
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version-file: pyproject.toml
+          enable-cache: false
+      - name: sync
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          NWP_CORE_READ_TOKEN: ${{ secrets.NWP_CORE_READ_TOKEN }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.https://github.com.helper
+          GIT_CONFIG_VALUE_0: '!f() { if [ -n "$NWP_CORE_READ_TOKEN" ]; then echo username=x-access-token; echo "password=$NWP_CORE_READ_TOKEN"; fi; }; f'
+        run: uv sync --locked --python "$PYTHON_VERSION" --all-extras --all-groups
+      - name: pytest
+        run: uv run --no-sync pytest
+      - name: surface
+        run: |
+          if grep -qx 'name = "nwp-core"' uv.lock; then
+            uv run --no-sync pytest tests/surface
+          else
+            echo "::notice::no nwp-core dependency; surface snapshots skipped"
+          fi
+
+  deps-allowlist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version-file: pyproject.toml
+          enable-cache: false
+      - name: sync
+        env:
+          NWP_CORE_READ_TOKEN: ${{ secrets.NWP_CORE_READ_TOKEN }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.https://github.com.helper
+          GIT_CONFIG_VALUE_0: '!f() { if [ -n "$NWP_CORE_READ_TOKEN" ]; then echo username=x-access-token; echo "password=$NWP_CORE_READ_TOKEN"; fi; }; f'
+        run: |
+          if [ -f ci/allowed-deps.txt ]; then
+            UV_PROJECT_ENVIRONMENT=.venv-base uv sync --locked --no-dev
+          fi
+      - name: allowlist
+        run: |
+          if [ -f ci/allowed-deps.txt ]; then
+            .venv-base/bin/python ci/check_allowed_deps.py --allowlist ci/allowed-deps.txt
+          else
+            echo "::notice::no ci/allowed-deps.txt; allowlist check skipped"
+          fi
+
+  gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: provision
+        run: python3 ci/gate/run_gate.py --provision
+      # No tree step in this copy: the tree scan reports the committed binary
+      # test fixtures as unscannable.
+      - name: diff
+        env:
+          NWP_GATE_DENYLIST: ${{ secrets.NWP_GATE_DENYLIST }}
+          NWP_GATE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          NWP_GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 ci/gate/run_gate.py --mode diff
+
+  image:
+    runs-on: ubuntu-24.04
+    env:
+      # Edit point: the statement that imports the tool's package chain.
+      IMPORT_CHAIN: import cv2, pysteps; from pysteps import motion
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: build
+        id: build
+        env:
+          IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+          NWP_CORE_READ_TOKEN: ${{ secrets.NWP_CORE_READ_TOKEN }}
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: credential.https://github.com.helper
+          GIT_CONFIG_VALUE_0: '!f() { if [ -n "$NWP_CORE_READ_TOKEN" ]; then echo username=x-access-token; echo "password=$NWP_CORE_READ_TOKEN"; fi; }; f'
+        run: |
+          docker buildx build --load --no-cache \
+            --secret id=nwp_core_token,env=NWP_CORE_READ_TOKEN \
+            --build-arg IMAGE_SOURCE="$IMAGE_SOURCE" \
+            --iidfile image.id .
+          echo "id=$(cat image.id)" >> "$GITHUB_OUTPUT"
+      - name: check image
+        env:
+          IMAGE_ID: ${{ steps.build.outputs.id }}
+        run: python3 ci/check_image.py "$IMAGE_ID" --imports "$IMPORT_CHAIN"
+      - name: fixture nowcast
+        env:
+          IMAGE_ID: ${{ steps.build.outputs.id }}
+        run: ci/fixture-nowcast.sh "$IMAGE_ID"
+      - name: allowlist in image
+        env:
+          IMAGE_ID: ${{ steps.build.outputs.id }}
+        run: |
+          if [ -f ci/allowed-deps.txt ]; then
+            docker run --rm --network none --read-only --tmpfs /tmp --cap-drop ALL \
+              --mount "type=bind,src=$PWD/ci,dst=/ci,readonly" \
+              --entrypoint python "$IMAGE_ID" \
+              /ci/check_allowed_deps.py --allowlist /ci/allowed-deps.txt
+          else
+            echo "::notice::no ci/allowed-deps.txt; allowlist check skipped"
+          fi

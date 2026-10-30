@@ -1,7 +1,6 @@
 # cod-nowcast-ons
 
-[![Tests](https://github.com/rjmalves/cod-nowcast-ons/actions/workflows/tests.yml/badge.svg)](https://github.com/rjmalves/cod-nowcast-ons/actions/workflows/tests.yml)
-[![Lint](https://github.com/rjmalves/cod-nowcast-ons/actions/workflows/lint.yaml/badge.svg)](https://github.com/rjmalves/cod-nowcast-ons/actions/workflows/lint.yaml)
+[![CI](https://github.com/rjmalves/cod-nowcast-ons/actions/workflows/ci.yml/badge.svg)](https://github.com/rjmalves/cod-nowcast-ons/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![pySTEPS](https://img.shields.io/badge/pySTEPS-1.18.1+-green.svg)](https://pysteps.readthedocs.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -130,9 +129,10 @@ cod-nowcast-ons --config config.jsonc
 # Build da imagem
 docker build -t cod-nowcast-ons .
 
-# Execução com volumes montados
-docker run -v $(pwd)/data:/app/data -v $(pwd)/config.jsonc:/app/config.jsonc \
-  cod-nowcast-ons --config /app/config.jsonc
+# Execução no diretório atual: config e caminhos relativos a /work
+docker run --rm --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \
+  --mount "type=bind,src=$PWD,dst=/work" --workdir /work \
+  cod-nowcast-ons --config config.jsonc
 ```
 
 ---
@@ -321,10 +321,10 @@ uv run pytest tests/integration/
 uv run pytest tests/unit/ --cov=app --cov-report=term
 
 # Linting
-uv run ruff check app/ tests/
+uv run ruff check .
 
 # Type checking
-uv run mypy app/
+uv run mypy
 ```
 
 ---

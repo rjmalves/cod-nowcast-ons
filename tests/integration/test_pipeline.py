@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 import polars as pl
 import pytest
@@ -13,7 +14,9 @@ from app.writers import write_cloud_motion_plots, write_inference_results
 class TestFullPipeline:
     """Test the complete nowcasting pipeline from input to output."""
 
-    def test_end_to_end_inference(self, test_data_dir, temp_output_dir):
+    def test_end_to_end_inference(
+        self, test_data_dir: Path, temp_output_dir: Path
+    ) -> None:
         """Test complete inference pipeline with test data."""
         # Check if we have test data
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
@@ -79,8 +82,8 @@ class TestFullPipeline:
         assert "valor" in df.columns
 
     def test_pipeline_with_multiple_subgrids(
-        self, test_data_dir, temp_output_dir
-    ):
+        self, test_data_dir: Path, temp_output_dir: Path
+    ) -> None:
         """Test pipeline with multiple geographic subgrids."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
         if len(test_files) < 5:
@@ -136,8 +139,11 @@ class TestFullPipeline:
 
     @pytest.mark.plotting
     def test_pipeline_with_plots(
-        self, test_data_dir, temp_output_dir, test_shapefile_path
-    ):
+        self,
+        test_data_dir: Path,
+        temp_output_dir: Path,
+        test_shapefile_path: Path,
+    ) -> None:
         """Test pipeline with plot generation enabled."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
         if len(test_files) < 5:
@@ -194,7 +200,7 @@ class TestFullPipeline:
 class TestPipelineErrorHandling:
     """Test error handling in the pipeline."""
 
-    def test_missing_input_files(self, temp_output_dir):
+    def test_missing_input_files(self, temp_output_dir: Path) -> None:
         """Test that missing input files are handled gracefully."""
         config = Config(
             mode="inference",
@@ -222,7 +228,9 @@ class TestPipelineErrorHandling:
         with pytest.raises(Exception) as _:
             manager.predict()
 
-    def test_invalid_subgrid_bounds(self, test_data_dir, temp_output_dir):
+    def test_invalid_subgrid_bounds(
+        self, test_data_dir: Path, temp_output_dir: Path
+    ) -> None:
         """Test with subgrid outside data bounds."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
         if not test_files:
@@ -267,8 +275,8 @@ class TestPipelinePerformance:
     """Performance tests for the pipeline."""
 
     def test_pipeline_completes_in_reasonable_time(
-        self, test_data_dir, temp_output_dir
-    ):
+        self, test_data_dir: Path, temp_output_dir: Path
+    ) -> None:
         """Test that pipeline completes within acceptable time."""
         import time
 

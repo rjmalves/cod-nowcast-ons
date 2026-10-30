@@ -1,5 +1,7 @@
 import argparse
 
+from app import __version__
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -10,5 +12,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default="config.jsonc",
         help="Path to configuration JSON file (default: config.json)",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     return parser

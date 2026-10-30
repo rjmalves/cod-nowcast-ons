@@ -79,10 +79,10 @@ pip install -e ".[dev]"
 uv run pytest tests/
 
 # Verificar linting
-uv run ruff check app/ tests/
+uv run ruff check .
 
 # Verificar tipos
-uv run mypy app/
+uv run mypy
 ```
 
 ---
@@ -97,13 +97,13 @@ Seguimos as convenções PEP 8 com algumas customizações definidas em `pyproje
 
 ```bash
 # Executar linter
-uv run ruff check app/ tests/
+uv run ruff check .
 
 # Formatar código automaticamente
-uv run ruff format app/ tests/
+uv run ruff format .
 
 # Verificar formatação sem modificar
-uv run ruff format --check app/ tests/
+uv run ruff format --check .
 ```
 
 ### Boas Práticas Python
@@ -282,9 +282,9 @@ class CloudMotionForecast:
 2. **Execute verificações locais**
 
    ```bash
-   uv run ruff check app/ tests/     # Linting
-   uv run ruff format app/ tests/    # Formatação
-   uv run mypy app/                  # Type checking
+   uv run ruff check .               # Linting
+   uv run ruff format .              # Formatação
+   uv run mypy                       # Type checking
    uv run pytest tests/              # Testes
    ```
 

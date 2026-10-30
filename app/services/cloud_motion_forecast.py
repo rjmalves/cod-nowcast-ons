@@ -6,7 +6,7 @@ import xarray as xr
 
 warnings.simplefilter("ignore", SyntaxWarning)
 
-from pysteps import motion, nowcasts  # type: ignore # noqa: E402
+from pysteps import motion, nowcasts  # noqa: E402
 
 
 class CloudMotionForecast:
@@ -19,7 +19,8 @@ class CloudMotionForecast:
 
     def _eval_motion_field(self, cod: np.ndarray) -> np.ndarray:
         oflow_method = motion.get_method(self.MOTION_FIELD_METHOD)
-        return oflow_method(cod)
+        motion_field: np.ndarray = oflow_method(cod)
+        return motion_field
 
     def _prepares_forecasting_sample(self, cod: np.ndarray) -> np.ndarray:
         last_sample = cod[-1, :, :]

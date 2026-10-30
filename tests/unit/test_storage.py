@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import polars as pl
 import pytest
 
 from app.storage import LocalBackend, S3Backend, StorageFactory
@@ -8,29 +9,29 @@ from app.storage import LocalBackend, S3Backend, StorageFactory
 class TestStorageFactory:
     """Test the storage factory pattern."""
 
-    def test_get_local_storage(self):
+    def test_get_local_storage(self) -> None:
         """Test that local paths return LocalBackend."""
         storage = StorageFactory.get_storage("data/input")
         assert isinstance(storage, LocalBackend)
 
-    def test_get_s3_storage(self):
+    def test_get_s3_storage(self) -> None:
         """Test that S3 URIs return S3Backend."""
-        storage = StorageFactory.get_storage("s3://bucket/path")
+        storage = StorageFactory.get_storage("s3://example-bucket/path")
         assert isinstance(storage, S3Backend)
 
-    def test_singleton_local(self):
+    def test_singleton_local(self) -> None:
         """Test that local backend is singleton."""
         storage1 = StorageFactory.get_storage("path1")
         storage2 = StorageFactory.get_storage("path2")
         assert storage1 is storage2
 
-    def test_singleton_s3(self):
+    def test_singleton_s3(self) -> None:
         """Test that S3 backend is singleton."""
-        storage1 = StorageFactory.get_storage("s3://bucket1/path")
-        storage2 = StorageFactory.get_storage("s3://bucket2/path")
+        storage1 = StorageFactory.get_storage("s3://example-bucket/path")
+        storage2 = StorageFactory.get_storage("s3://test-bucket/path")
         assert storage1 is storage2
 
-    def test_clear_cache(self):
+    def test_clear_cache(self) -> None:
         """Test clearing cached backends."""
         storage1 = StorageFactory.get_storage("path")
         StorageFactory.clear_cache()
@@ -41,7 +42,7 @@ class TestStorageFactory:
 class TestLocalBackend:
     """Test local filesystem backend."""
 
-    def test_join_path(self):
+    def test_join_path(self) -> None:
         """Test path joining."""
         storage = LocalBackend()
         path = storage.join_path("data", "input", "file.parquet")
@@ -49,7 +50,7 @@ class TestLocalBackend:
         assert "input" in path
         assert "file.parquet" in path
 
-    def test_exists(self, tmp_path):
+    def test_exists(self, tmp_path: Path) -> None:
         """Test file existence check."""
         storage = LocalBackend()
 
@@ -61,7 +62,7 @@ class TestLocalBackend:
         test_file.write_text("test")
         assert storage.exists(str(test_file))
 
-    def test_makedirs(self, tmp_path):
+    def test_makedirs(self, tmp_path: Path) -> None:
         """Test directory creation."""
         storage = LocalBackend()
         new_dir = tmp_path / "nested" / "directory"
@@ -72,7 +73,7 @@ class TestLocalBackend:
         # Test exist_ok
         storage.makedirs(str(new_dir), exist_ok=True)
 
-    def test_write_read_bytes(self, tmp_path):
+    def test_write_read_bytes(self, tmp_path: Path) -> None:
         """Test writing and reading bytes."""
         storage = LocalBackend()
         test_file = tmp_path / "test.bin"
@@ -84,7 +85,7 @@ class TestLocalBackend:
         read_data = storage.read_bytes(str(test_file))
         assert read_data == test_data
 
-    def test_delete(self, tmp_path):
+    def test_delete(self, tmp_path: Path) -> None:
         """Test file deletion."""
         storage = LocalBackend()
         test_file = tmp_path / "test.txt"
@@ -94,7 +95,9 @@ class TestLocalBackend:
         storage.delete(str(test_file))
         assert not test_file.exists()
 
-    def test_write_read_parquet(self, tmp_path, sample_parquet_data):
+    def test_write_read_parquet(
+        self, tmp_path: Path, sample_parquet_data: pl.DataFrame
+    ) -> None:
         """Test parquet I/O operations."""
         storage = LocalBackend()
         test_file = tmp_path / "test.parquet"
@@ -113,7 +116,7 @@ class TestLocalBackend:
         assert "longitude" in df_read.columns
         assert "cod" in df_read.columns
 
-    def test_list_files(self, tmp_path):
+    def test_list_files(self, tmp_path: Path) -> None:
         """Test listing files with pattern."""
         storage = LocalBackend()
 
@@ -127,7 +130,7 @@ class TestLocalBackend:
         assert len(files) == 2
         assert all("parquet" in f for f in files)
 
-    def test_get_uri(self, tmp_path):
+    def test_get_uri(self, tmp_path: Path) -> None:
         """Test getting absolute URI."""
         storage = LocalBackend()
         uri = storage.get_uri(str(tmp_path / "test.txt"))
@@ -137,50 +140,50 @@ class TestLocalBackend:
 class TestS3Backend:
     """Test S3 storage backend."""
 
-    def test_parse_s3_uri(self):
+    def test_parse_s3_uri(self) -> None:
         """Test S3 URI parsing."""
         storage = S3Backend()
         bucket, key = storage._parse_s3_uri(
-            "s3://my-bucket/path/to/file.parquet"
+            "s3://example-bucket/path/to/file.parquet"
         )
-        assert bucket == "my-bucket"
+        assert bucket == "example-bucket"
         assert key == "path/to/file.parquet"
 
-    def test_parse_s3_uri_invalid(self):
+    def test_parse_s3_uri_invalid(self) -> None:
         """Test that invalid URIs raise ValueError."""
         storage = S3Backend()
         with pytest.raises(ValueError, match="Invalid S3 URI"):
             storage._parse_s3_uri("not-an-s3-uri")
 
-    def test_join_path_s3(self):
+    def test_join_path_s3(self) -> None:
         """Test S3 path joining."""
         storage = S3Backend()
         path = storage.join_path(
-            "s3://bucket/prefix", "subfolder", "file.parquet"
+            "s3://example-bucket/prefix", "subfolder", "file.parquet"
         )
-        assert path == "s3://bucket/prefix/subfolder/file.parquet"
+        assert path == "s3://example-bucket/prefix/subfolder/file.parquet"
 
-    def test_join_path_no_prefix(self):
+    def test_join_path_no_prefix(self) -> None:
         """Test path joining without s3:// prefix."""
         storage = S3Backend()
         path = storage.join_path("bucket", "path", "file.parquet")
         assert "/" in path
         assert "bucket" in path
 
-    def test_get_uri(self):
+    def test_get_uri(self) -> None:
         """Test getting S3 URI."""
         storage = S3Backend()
 
         # With s3:// prefix
-        uri1 = storage.get_uri("s3://bucket/key")
-        assert uri1 == "s3://bucket/key"
+        uri1 = storage.get_uri("s3://example-bucket/key")
+        assert uri1 == "s3://example-bucket/key"
 
         # Without prefix
-        uri2 = storage.get_uri("bucket/key")
-        assert uri2 == "s3://bucket/key"
+        uri2 = storage.get_uri("example-bucket/key")
+        assert uri2 == "s3://example-bucket/key"
 
     @pytest.mark.s3
-    def test_s3_operations_with_moto(self, mock_s3_bucket):
+    def test_s3_operations_with_moto(self, mock_s3_bucket: str) -> None:
         """Test S3 operations with mocked S3 (requires moto)."""
         storage = S3Backend()
         bucket = mock_s3_bucket
@@ -206,10 +209,10 @@ class TestS3Backend:
 class TestStorageIntegration:
     """Integration tests across storage backends."""
 
-    def test_factory_returns_correct_backend(self):
+    def test_factory_returns_correct_backend(self) -> None:
         """Test factory pattern with both backend types."""
         local = StorageFactory.get_storage("/local/path")
-        s3 = StorageFactory.get_storage("s3://bucket/path")
+        s3 = StorageFactory.get_storage("s3://example-bucket/path")
 
         assert type(local).__name__ == "LocalBackend"
         assert type(s3).__name__ == "S3Backend"

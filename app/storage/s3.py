@@ -1,9 +1,10 @@
 import re
+from typing import Any
 
 import boto3
 import pandas as pd
 import polars as pl
-import s3fs  # type: ignore
+import s3fs
 from botocore.exceptions import ClientError
 
 from .base import StorageBackend
@@ -12,26 +13,26 @@ from .base import StorageBackend
 class S3Backend(StorageBackend):
     """AWS S3 storage backend."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize S3 client and filesystem."""
         self.s3_client = boto3.client("s3")
         self.s3fs = s3fs.S3FileSystem()
 
     def _parse_s3_uri(self, path: str) -> tuple[str, str]:
-        """Parse s3://bucket/key into (bucket, key)."""
+        """Parse s3://example-bucket/key into (bucket, key)."""
         match = re.match(r"s3://([^/]+)/(.*)", path)
         if not match:
             raise ValueError(f"Invalid S3 URI: {path}")
         return match.group(1), match.group(2)
 
-    def read_parquet(self, path: str, **kwargs) -> pl.LazyFrame:
+    def read_parquet(self, path: str, **kwargs: Any) -> pl.LazyFrame:
         """Read Parquet from S3 using Polars with s3fs."""
         return pl.scan_parquet(
             path,
             **kwargs,
         )
 
-    def write_parquet(self, df: pd.DataFrame, path: str, **kwargs) -> None:
+    def write_parquet(self, df: pd.DataFrame, path: str, **kwargs: Any) -> None:
         """Write Parquet to S3 using Pandas with s3fs."""
         with self.s3fs.open(path, "wb") as f:
             df.to_parquet(f, **kwargs)
@@ -40,7 +41,8 @@ class S3Backend(StorageBackend):
         """Read file from S3 as bytes."""
         bucket, key = self._parse_s3_uri(path)
         response = self.s3_client.get_object(Bucket=bucket, Key=key)
-        return response["Body"].read()
+        body: bytes = response["Body"].read()
+        return body
 
     def write_bytes(self, data: bytes, path: str) -> None:
         """Write bytes to S3."""

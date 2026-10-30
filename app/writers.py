@@ -6,7 +6,7 @@ from app.storage import StorageFactory
 from app.utils.plots import generate_cod_forecast_gif
 
 
-def write_inference_results(config: Config, result: InferenceResult):
+def write_inference_results(config: Config, result: InferenceResult) -> None:
     storage = StorageFactory.get_storage(config.output)
     storage.makedirs(config.output)
 
@@ -37,7 +37,7 @@ def write_inference_results(config: Config, result: InferenceResult):
 def write_cloud_motion_plots(
     config: Config,
     result: InferenceResult,
-):
+) -> None:
     storage = StorageFactory.get_storage(config.output)
 
     for subgrid_name, subgrid_result in result.subgrid_results.items():

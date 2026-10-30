@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -8,7 +9,7 @@ from app.internal.config import Config, PostprocessingConfig, SubgridConfig
 class TestSubgridConfig:
     """Test SubgridConfig dataclass."""
 
-    def test_parse_valid(self):
+    def test_parse_valid(self) -> None:
         """Test parsing valid subgrid dictionary."""
         data = {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
         config = SubgridConfig.parse(data)
@@ -17,7 +18,7 @@ class TestSubgridConfig:
         assert config.lat == [-23.0, -20.0]
         assert config.lon == [-50.0, -47.0]
 
-    def test_direct_construction(self):
+    def test_direct_construction(self) -> None:
         """Test direct construction."""
         config = SubgridConfig(
             name="test", lat=[-10.0, -5.0], lon=[-60.0, -55.0]
@@ -30,24 +31,24 @@ class TestSubgridConfig:
 class TestPostprocessingConfig:
     """Test PostprocessingConfig dataclass."""
 
-    def test_parse_with_plots(self):
+    def test_parse_with_plots(self) -> None:
         """Test parsing with plots enabled."""
         config = PostprocessingConfig.parse({"plots": True})
         assert config.plots is True
         assert config.shapefile_path is None
 
-    def test_parse_default(self):
+    def test_parse_default(self) -> None:
         """Test parsing with missing plots key."""
         config = PostprocessingConfig.parse({})
         assert config.plots is False
         assert config.shapefile_path is None
 
-    def test_parse_false(self):
+    def test_parse_false(self) -> None:
         """Test parsing with plots explicitly false."""
         config = PostprocessingConfig.parse({"plots": False})
         assert config.plots is False
 
-    def test_parse_with_shapefile(self):
+    def test_parse_with_shapefile(self) -> None:
         """Test parsing with shapefile_path."""
         config = PostprocessingConfig.parse(
             {
@@ -62,7 +63,7 @@ class TestPostprocessingConfig:
 class TestConfig:
     """Test main Config dataclass."""
 
-    def test_parse_complete_config(self):
+    def test_parse_complete_config(self) -> None:
         """Test parsing a complete configuration."""
         data = {
             "mode": "inference",
@@ -90,7 +91,7 @@ class TestConfig:
         assert config.subgrids[0].name == "SE"
         assert config.postprocessing.plots is True
 
-    def test_parse_minimal_config(self):
+    def test_parse_minimal_config(self) -> None:
         """Test parsing minimal configuration (no postprocessing)."""
         data = {
             "mode": "inference",
@@ -107,7 +108,7 @@ class TestConfig:
         config = Config.parse(data)
         assert config.postprocessing.plots is False
 
-    def test_parse_multiple_subgrids(self):
+    def test_parse_multiple_subgrids(self) -> None:
         """Test parsing configuration with multiple subgrids."""
         data = {
             "mode": "inference",
@@ -127,12 +128,12 @@ class TestConfig:
         assert config.subgrids[0].name == "SE"
         assert config.subgrids[1].name == "NE"
 
-    def test_parse_s3_paths(self):
+    def test_parse_s3_paths(self) -> None:
         """Test parsing configuration with S3 paths."""
         data = {
             "mode": "inference",
-            "input": "s3://bucket/input",
-            "output": "s3://bucket/output",
+            "input": "s3://example-bucket/input",
+            "output": "s3://example-bucket/output",
             "base_datetime": "2024-08-01T10:00:00",
             "num_past_samples": 6,
             "num_future_samples": 3,
@@ -145,7 +146,7 @@ class TestConfig:
         assert config.input.startswith("s3://")
         assert config.output.startswith("s3://")
 
-    def test_from_json(self, tmp_path):
+    def test_from_json(self, tmp_path: Path) -> None:
         """Test loading configuration from JSON file."""
         config_data = """{
             "mode": "inference",
@@ -166,7 +167,7 @@ class TestConfig:
         assert config.mode == "inference"
         assert config.num_past_samples == 6
 
-    def test_from_json_with_comments(self, tmp_path):
+    def test_from_json_with_comments(self, tmp_path: Path) -> None:
         """Test loading JSON with comments (JSONC format)."""
         config_data = """{
             // This is a comment
@@ -189,7 +190,7 @@ class TestConfig:
         config = Config.from_json(str(config_file))
         assert config.mode == "inference"
 
-    def test_invalid_datetime_format(self):
+    def test_invalid_datetime_format(self) -> None:
         """Test that invalid datetime raises error."""
         data = {
             "mode": "inference",
@@ -206,7 +207,7 @@ class TestConfig:
         with pytest.raises(ValueError):
             Config.parse(data)
 
-    def test_missing_required_field(self):
+    def test_missing_required_field(self) -> None:
         """Test that missing required field raises error."""
         data = {
             "mode": "inference",
@@ -225,7 +226,7 @@ class TestConfig:
 
 
 @pytest.mark.unit
-def test_config_roundtrip(tmp_path):
+def test_config_roundtrip(tmp_path: Path) -> None:
     """Test that config can be saved and loaded preserving values."""
     import json
 

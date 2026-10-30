@@ -159,7 +159,7 @@ def sample_parquet_data() -> pl.DataFrame:
 
 
 @pytest.fixture
-def mock_s3_bucket():
+def mock_s3_bucket() -> Generator[str, None, None]:
     """
     Create a mock S3 bucket using moto.
 
@@ -190,7 +190,7 @@ def mock_s3_bucket():
         )
 
         # Create test bucket
-        bucket_name = "test-cod-nowcast-bucket"
+        bucket_name = "test-bucket"
         s3_client.create_bucket(Bucket=bucket_name)
 
         yield bucket_name
@@ -199,7 +199,7 @@ def mock_s3_bucket():
 
 
 # Markers for different test categories
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Configure custom pytest markers."""
     config.addinivalue_line(
         "markers", "unit: Unit tests for individual components"

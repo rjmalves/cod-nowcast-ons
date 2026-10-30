@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -12,7 +13,7 @@ from app.readers import InputData, SubgridInputData
 class TestSubgridInputData:
     """Test SubgridInputData dataclass."""
 
-    def test_goes_input_filename(self):
+    def test_goes_input_filename(self) -> None:
         """Test GOES filename generation."""
         time1 = datetime(2024, 8, 1, 10, 30)
         filename1 = SubgridInputData.goes_input_filename(time1)
@@ -23,7 +24,9 @@ class TestSubgridInputData:
         assert filename2 == "GOES_COD_BR_20241231-2359.parquet"
 
     @pytest.mark.integration
-    def test_from_parquet_local(self, test_data_dir, sample_subgrid_config):
+    def test_from_parquet_local(
+        self, test_data_dir: Path, sample_subgrid_config: SubgridConfig
+    ) -> None:
         """Test loading data from local parquet file."""
         # Use test fixture data
         time = datetime(2024, 8, 1, 0, 0)
@@ -63,8 +66,8 @@ class TestSubgridInputData:
                 expected_path.unlink()
 
     def test_from_parquet_filters_by_subgrid(
-        self, tmp_path, sample_subgrid_config
-    ):
+        self, tmp_path: Path, sample_subgrid_config: SubgridConfig
+    ) -> None:
         """Test that data is filtered by subgrid bounds."""
         # Create test parquet with data outside and inside bounds
         test_data = pl.DataFrame(
@@ -97,16 +100,18 @@ class TestSubgridInputData:
 class TestInputData:
     """Test InputData reader."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test InputData initialization."""
         reader = InputData("data/input")
         assert reader.path == "data/input"
 
-    def test_index_cols(self):
+    def test_index_cols(self) -> None:
         """Test INDEX_COLS constant."""
         assert InputData.INDEX_COLS == ["time", "latitude", "longitude"]
 
-    def test_for_subgrid_returns_xarray(self, sample_cod_dataarray, tmp_path):
+    def test_for_subgrid_returns_xarray(
+        self, sample_cod_dataarray: xr.DataArray, tmp_path: Path
+    ) -> None:
         """Test that for_subgrid returns xarray DataArray."""
         # Create test parquet files
         subgrid = SubgridConfig(
@@ -148,8 +153,8 @@ class TestInputData:
 
     @pytest.mark.integration
     def test_for_subgrid_with_test_data(
-        self, test_data_dir, sample_subgrid_config
-    ):
+        self, test_data_dir: Path, sample_subgrid_config: SubgridConfig
+    ) -> None:
         """Test for_subgrid with actual test fixture data."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
         if len(test_files) < 5:
@@ -172,7 +177,7 @@ class TestInputData:
         assert result.longitude.min() >= sample_subgrid_config.lon[0]
         assert result.longitude.max() <= sample_subgrid_config.lon[1]
 
-    def test_for_subgrid_missing_file(self, tmp_path):
+    def test_for_subgrid_missing_file(self, tmp_path: Path) -> None:
         """Test that missing file raises appropriate error."""
         subgrid = SubgridConfig(
             name="test", lat=[-23.0, -20.0], lon=[-50.0, -47.0]
@@ -188,7 +193,7 @@ class TestInputData:
 class TestReadersDataFlow:
     """Test data flow through readers."""
 
-    def test_subgrid_data_has_time_column(self, tmp_path):
+    def test_subgrid_data_has_time_column(self, tmp_path: Path) -> None:
         """Test that SubgridInputData adds time column."""
         subgrid = SubgridConfig(
             name="test", lat=[-23.0, -20.0], lon=[-50.0, -47.0]
@@ -212,7 +217,7 @@ class TestReadersDataFlow:
         assert "time" in data.cod.columns
         assert data.cod["time"][0] == time
 
-    def test_input_data_sorts_correctly(self, tmp_path):
+    def test_input_data_sorts_correctly(self, tmp_path: Path) -> None:
         """Test that InputData sorts by time, lat, lon."""
         subgrid = SubgridConfig(
             name="test", lat=[-23.0, -20.0], lon=[-50.0, -47.0]
