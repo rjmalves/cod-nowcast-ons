@@ -10,14 +10,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from nwp_core.storage import StorageLocation
 
-from cod_nowcast_ons._config import Subgrid
-from cod_nowcast_ons._forecast import predict_subgrids
-from cod_nowcast_ons._frames import InputData
-from cod_nowcast_ons._output import write_inference_results
+from cod_nowcast_ons import NowcastConfig, Subgrid, nowcast
 from tests.fixtures.goes_cod.criteria import L, P, nominal_slot
 from tests.fixtures.goes_cod.materialize import (
-    FRAMES_PREFIX,
     SOURCE,
     load_source,
     materialize,
@@ -37,26 +34,25 @@ SUBGRID = (
 
 
 def run_regression(input_root: Path, out_dir: Path) -> Path:
-    """Run the code under test on the frames under ``input_root``.
+    """Run ``cod_nowcast_ons.nowcast`` on the frames under ``input_root``.
 
-    This is the only call into the code under test, which epic 03 retargets
-    to ``cod_nowcast_ons.nowcast``. ``input_root`` is the gold layout root,
-    which the retargeted adapter passes to ``[input]`` unchanged. The frame
-    reader reads the frames directly under its input, so this adapter appends
-    ``goes_processed``.
+    This is the only call into the code under test. ``input_root`` is the gold
+    layout root, which this adapter passes to ``[input]`` unchanged.
 
     Returns:
         The path of the ``cod.parquet`` written under ``out_dir``.
     """
     name, lat, lon = SUBGRID
-    result = predict_subgrids(
-        InputData(str(input_root / FRAMES_PREFIX)),
-        [Subgrid(name=name, lat=lat, lon=lon)],
-        issue_time=BASE_DATETIME,
-        num_frames=NUM_PAST,
-        num_future_samples=NUM_FUTURE,
+    nowcast(
+        NowcastConfig(
+            base_datetime=SLOTS[P],
+            input=StorageLocation(uri=str(input_root)),
+            output=StorageLocation(uri=str(out_dir)),
+            num_past_samples=NUM_PAST,
+            num_future_samples=NUM_FUTURE,
+            subgrids=(Subgrid(name=name, lat=lat, lon=lon),),
+        )
     )
-    write_inference_results(result, str(out_dir), BASE_DATETIME)
     return out_dir / "cod.parquet"
 
 
