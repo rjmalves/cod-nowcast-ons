@@ -68,7 +68,6 @@ class TestFullPipeline:
             num_future_samples=3,
         )
 
-        # Verify result structure
         assert result is not None
         assert "TEST" in result.subgrid_results
 
@@ -76,22 +75,18 @@ class TestFullPipeline:
         assert subgrid_result.cod is not None
         assert subgrid_result.motion_field is not None
 
-        # Verify forecast dimensions
         assert subgrid_result.cod.time.size == 3
         assert subgrid_result.motion_field.shape[0] == 2  # U, V
 
-        # Write results
         write_inference_results(
             result,
             open_storage(StorageLocation(uri=str(temp_output_dir))),
             SLOTS[4],
         )
 
-        # Verify output file exists
         output_file = temp_output_dir / "cod.parquet"
         assert output_file.exists()
 
-        # Verify output content
         df = pl.read_parquet(output_file)
         assert len(df) > 0
         assert "data_hora_rodada" in df.columns
@@ -122,11 +117,9 @@ class TestFullPipeline:
             num_future_samples=2,
         )
 
-        # Verify both subgrids processed
         assert "REGION1" in result.subgrid_results
         assert "REGION2" in result.subgrid_results
 
-        # Write and verify
         write_inference_results(
             result,
             open_storage(StorageLocation(uri=str(temp_output_dir))),
@@ -136,7 +129,6 @@ class TestFullPipeline:
         assert output_file.exists()
 
         df = pl.read_parquet(output_file)
-        # Should have data from both regions
         assert len(df) > 0
 
     @pytest.mark.plotting
@@ -242,7 +234,7 @@ class TestPipelineErrorHandling:
                     # Subgrid completely outside test data bounds
                     Subgrid(
                         name="OUTSIDE",
-                        lat=(10.0, 20.0),  # Outside test data
+                        lat=(10.0, 20.0),
                         lon=(-10.0, -5.0),
                     )
                 ],
@@ -260,7 +252,6 @@ class TestPipelinePerformance:
         self, layout_root: Path, temp_output_dir: Path
     ) -> None:
         """Test that pipeline completes within acceptable time."""
-        # Time the pipeline
         start = time.time()
 
         result = predict_subgrids(
@@ -283,6 +274,4 @@ class TestPipelinePerformance:
 
         elapsed = time.time() - start
 
-        # For small test data, should complete quickly
-        # Adjust threshold based on expected performance
         assert elapsed < 30.0, f"Pipeline took {elapsed:.1f}s (too slow)"

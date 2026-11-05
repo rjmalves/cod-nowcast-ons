@@ -102,8 +102,7 @@ def sample_cod_dataarray() -> xr.DataArray:
         # Slight shift to simulate cloud motion
         data[t] = np.roll(data[t], shift=1, axis=1)
 
-    # Create via pandas DataFrame to match real flow
-    # Create multi-index dataframe like real data
+    # Build via a multi-index pandas DataFrame to match the real flow
     time_grid, lat_grid, lon_grid = np.meshgrid(
         times_pd, lats, lons, indexing="ij"
     )
@@ -129,7 +128,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-# Markers for different test categories
 def pytest_configure(config: pytest.Config) -> None:
     """Configure custom pytest markers."""
     config.addinivalue_line(
