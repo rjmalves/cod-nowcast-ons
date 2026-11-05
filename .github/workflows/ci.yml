@@ -111,10 +111,10 @@ jobs:
 
   gate:
     runs-on: ubuntu-24.04
-    # Local change to the template, which leaves the denylist opt-in
-    # (L-ADR-032): pushes and pull requests from this repository's branches
-    # fail without it. Fork pull requests and runs started by Dependabot never
-    # get the secret (SR-018-06) and run the shape rules only.
+    # Local change to the template, which leaves the denylist opt-in: pushes
+    # and pull requests from this repository's branches fail without it. Fork
+    # pull requests and runs started by Dependabot never get the secret and
+    # run the shape rules only.
     env:
       REQUIRE_DENYLIST: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' && 'yes' || '' }}
     steps:

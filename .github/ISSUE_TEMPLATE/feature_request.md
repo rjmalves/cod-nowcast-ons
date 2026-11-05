@@ -27,12 +27,12 @@ Descreva outras soluções ou funcionalidades que você considerou.
 Descreva um cenário específico onde esta funcionalidade seria útil.
 
 ```python
-# Exemplo de código de como a funcionalidade seria usada
-from app.services import CloudMotionForecast
+# Exemplo de como a funcionalidade seria usada
+from cod_nowcast_ons import NowcastConfig, nowcast
 
-# Sua sugestão de API
-forecast = CloudMotionForecast(cod_data)
-result = forecast.nova_funcionalidade(parametros)
+# Sua sugestão de API ou de chave de configuração, em comentários:
+# config = NowcastConfig(..., nova_chave=valor)
+# nowcast(config)
 ```
 
 ## Impacto na Arquitetura
@@ -41,6 +41,8 @@ result = forecast.nova_funcionalidade(parametros)
 - [ ] Modifica APIs existentes
 - [ ] Adiciona novas dependências
 - [ ] Requer mudanças no formato de configuração
+- [ ] Muda o schema de `cod.parquet`
+- [ ] Muda a saída da CLI ou os códigos de saída
 
 ## Contexto Adicional
 

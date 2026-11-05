@@ -1,86 +1,86 @@
 # Contribuindo para o cod-nowcast-ons
 
-Obrigado pelo interesse em contribuir! Este documento fornece diretrizes para contribuições ao projeto.
+Obrigado pelo interesse em contribuir! Este documento descreve como configurar o ambiente, o padrão de código, os testes e o fluxo de pull requests. Os textos de documentação e os templates do GitHub são em pt-BR.
 
-## 📋 Índice
+---
 
-- [Como Contribuir](#como-contribuir)
-- [Configuração do Ambiente](#configuração-do-ambiente)
-- [Padrões de Código](#padrões-de-código)
+## Índice
+
+- [Como contribuir](#como-contribuir)
+- [Configuração do ambiente](#configuração-do-ambiente)
+- [Estrutura do pacote](#estrutura-do-pacote)
+- [Padrões de código](#padrões-de-código)
 - [Testes](#testes)
 - [Documentação](#documentação)
-- [Processo de Pull Request](#processo-de-pull-request)
+- [Processo de pull request](#processo-de-pull-request)
+- [Versionamento](#versionamento)
+- [Dúvidas](#dúvidas)
 
 ---
 
-## 🤝 Como Contribuir
+## Como contribuir
 
-### Reportando Bugs
+### Reportando bugs
 
-1. Verifique se o bug já não foi reportado nas [Issues](https://github.com/rjmalves/cod-nowcast-ons/issues)
-2. Se não encontrar, crie uma nova issue usando o template de bug report
-3. Inclua:
-   - Descrição clara do problema
-   - Passos para reproduzir
-   - Comportamento esperado vs. observado
-   - Versão do Python e do pacote
-   - Logs de erro (se aplicável)
+1. Procure nas [Issues](https://github.com/rjmalves/cod-nowcast-ons/issues) para ver se o bug já foi reportado.
+2. Se não encontrar, abra uma issue com o template de bug report.
+3. Preencha o template com:
+   - os passos para reproduzir, com o comando executado;
+   - o comportamento esperado e o observado;
+   - o código de saída do comando `cod-nowcast-ons nowcast`;
+   - o resumo da execução (`nwp.run-summary/1`), que a ferramenta imprime na saída padrão;
+   - os logs em JSON, que a ferramenta imprime na saída de erro;
+   - a saída de `cod-nowcast-ons --version`, a versão do Python e o sistema operacional;
+   - o arquivo de configuração TOML e as variáveis `COD_NOWCAST_ONS_*` definidas, sem credenciais, nomes de bucket nem caminhos internos.
 
-### Sugerindo Melhorias
+### Sugerindo melhorias
 
-1. Abra uma issue usando o template de feature request
-2. Descreva:
-   - O problema que a melhoria resolve
-   - A solução proposta
-   - Alternativas consideradas
+1. Abra uma issue com o template de feature request.
+2. Descreva o problema que a melhoria resolve, a solução proposta e as alternativas consideradas.
+3. Marque se a mudança altera o schema do `cod.parquet`, a saída da CLI ou os códigos de saída.
 
-### Contribuindo com Código
+### Contribuindo com código
 
-1. Fork o repositório
-2. Crie uma branch para sua feature (`git checkout -b feature/minha-feature`)
-3. Faça commits atômicos com mensagens descritivas
-4. Escreva/atualize testes para suas mudanças
-5. Garanta que todos os testes passam
-6. Abra um Pull Request
+1. Faça um fork do repositório.
+2. Crie uma branch a partir da `main` (`git checkout -b feat/minha-mudanca`).
+3. Faça commits pequenos, um por mudança lógica.
+4. Escreva ou atualize os testes das suas mudanças.
+5. Rode `make lint typecheck test` e `make gate`.
+6. Abra um pull request, conforme a seção [Processo de pull request](#processo-de-pull-request).
 
 ---
 
-## 🛠️ Configuração do Ambiente
+## Configuração do ambiente
 
 ### Pré-requisitos
 
-- Python >= 3.11
-- [uv](https://github.com/astral-sh/uv) (gerenciador de pacotes recomendado)
-- Git
+- Python 3.11 ou mais novo.
+- [uv](https://github.com/astral-sh/uv) 0.9.22 ou mais novo.
+- Acesso de leitura ao repositório do nwp-core, como a seção `## Status` do [README.md](README.md) explica. Sem ele, ninguém consegue instalar a ferramenta.
+- Git.
+- Docker, somente para construir a imagem (`make image`).
 
-### Setup Inicial
+### Configuração inicial
 
 ```bash
-# Clone seu fork
+# Clone o seu fork
 git clone https://github.com/SEU_USUARIO/cod-nowcast-ons.git
 cd cod-nowcast-ons
 
 # Adicione o upstream
 git remote add upstream https://github.com/rjmalves/cod-nowcast-ons.git
 
-# Instale as dependências com uv (inclui o grupo dev)
+# Instale as dependências, com o grupo dev, exatamente como o uv.lock fixa
 uv sync --locked
 ```
 
-Enquanto o nwp-core vem de um repositório git privado, o `uv sync` exige acesso de leitura a ele e os pull requests vindos de forks falham no CI. Veja [Status](README.md#status).
-
-### Verificando a Instalação
+### Verificando a instalação
 
 ```bash
-# Executar testes
-uv run pytest tests/
-
-# Verificar linting
-uv run ruff check .
-
-# Verificar tipos
-uv run mypy
+make lint typecheck test
 ```
+
+Os três alvos precisam terminar sem erro antes de você começar a alterar o código.
 
 ### Atualizando dependências
 
@@ -113,184 +113,72 @@ Nenhum secret é criado para o Dependabot, nem o token de leitura nem a lista de
 
 ---
 
-## 📐 Padrões de Código
+## Estrutura do pacote
 
-### Estilo
+O código fica em `src/cod_nowcast_ons/`:
 
-Seguimos as convenções PEP 8 com algumas customizações definidas em `pyproject.toml`.
+| Arquivo        | Papel                                                                    |
+| -------------- | ------------------------------------------------------------------------ |
+| `__init__.py`  | Superfície pública da API: `nowcast`, `NowcastConfig` e os demais nomes de `__all__`. |
+| `cli.py`       | Comando `cod-nowcast-ons`, a segunda parte pública (`cod_nowcast_ons.cli`). |
+| `_api.py`      | Orquestra uma execução.                                                  |
+| `_config.py`   | Leitura e validação da configuração.                                     |
+| `_frames.py`   | Leitura dos quadros de entrada.                                          |
+| `_guard.py`    | Verificação de que a entrada está pronta.                                |
+| `_forecast.py` | Cálculo da previsão.                                                     |
+| `_output.py`   | Gravação dos artefatos e do resumo da execução.                          |
+| `_plots.py`    | Geração dos gráficos.                                                    |
 
-### Verificação de Estilo
-
-```bash
-# Executar linter
-uv run ruff check .
-
-# Formatar código automaticamente
-uv run ruff format .
-
-# Verificar formatação sem modificar
-uv run ruff format --check .
-```
-
-### Boas Práticas Python
-
-Seguimos os princípios de código limpo e tipagem estática:
-
-#### 1. Type Hints Obrigatórios
-
-```python
-# ✅ Bom: função com type hints completos
-def calcular_mae(observado: np.ndarray, previsto: np.ndarray) -> float:
-    """Calcula o erro médio absoluto."""
-    return float(np.mean(np.abs(observado - previsto)))
-
-# ❌ Evitar: funções sem type hints
-def calcular_mae(observado, previsto):
-    return np.mean(np.abs(observado - previsto))
-```
-
-#### 2. Docstrings Claras
-
-```python
-# ✅ Bom: docstring informativa
-def forecast(self, n_leadtimes: int) -> xr.DataArray:
-    """
-    Gera previsão de COD usando extrapolação Lagrangiana.
-
-    Args:
-        n_leadtimes: Número de passos de tempo à frente para prever.
-
-    Returns:
-        DataArray com dimensões (latitude, longitude, time).
-
-    Raises:
-        ValueError: Se n_leadtimes <= 0.
-    """
-    ...
-```
-
-#### 3. Validação de Entrada
-
-```python
-# ✅ Bom: validar tipos e valores
-def processar_dados(df: pl.DataFrame, coluna: str) -> pl.DataFrame:
-    if coluna not in df.columns:
-        raise ValueError(f"Coluna '{coluna}' não encontrada no DataFrame")
-    # ...
-```
-
-#### 4. Evitar Efeitos Colaterais
-
-```python
-# ✅ Bom: função pura
-def normalizar(valores: np.ndarray) -> np.ndarray:
-    return (valores - valores.min()) / (valores.max() - valores.min())
-
-# ❌ Evitar: modificar entrada in-place sem documentar
-def normalizar(valores: np.ndarray) -> None:
-    valores[:] = (valores - valores.min()) / (valores.max() - valores.min())
-```
+Os módulos com prefixo `_` são privados: podem mudar sem aviso e nenhum código externo deve importá-los. A superfície pública é `cod_nowcast_ons`, `cod_nowcast_ons.cli`, as opções e os nomes de ambiente da CLI, o resumo da execução e o `cod.parquet`. O [ARCHITECTURE.md](ARCHITECTURE.md) explica o fluxo de dados entre os módulos.
 
 ---
 
-## 🧪 Testes
+## Padrões de código
 
-### Estrutura de Testes
-
-```
-tests/
-├── conftest.py              # Fixtures compartilhadas
-├── fixtures/                # Dados de teste
-│   └── generate_test_data.py
-├── unit/                    # Testes unitários
-│   ├── test_config.py
-│   ├── test_cloud_motion_forecast.py
-│   ├── test_readers.py
-│   └── test_storage.py
-└── integration/             # Testes de integração
-    └── test_pipeline.py
-```
-
-### Escrevendo Testes
-
-```python
-import pytest
-import numpy as np
-
-def test_motion_field_estimation_with_valid_data():
-    """Testa estimação de campo de movimento com dados válidos."""
-    # Arrange: preparar dados
-    cod_data = create_sample_cod_data()
-    forecast = CloudMotionForecast(cod_data)
-
-    # Act: executar função
-    result = forecast.forecast(n_leadtimes=6)
-
-    # Assert: verificar resultado
-    assert result.dims == ("latitude", "longitude", "time")
-    assert len(result.time) == 6
-    assert not np.any(np.isnan(result.values))
-```
-
-### Executando Testes
-
-```bash
-# Todos os testes
-uv run pytest tests/
-
-# Apenas testes unitários
-uv run pytest tests/unit/
-
-# Testes de integração
-uv run pytest tests/integration/
-
-# Com cobertura
-uv run pytest tests/unit/ --cov=app --cov-report=term
-
-# Teste específico
-uv run pytest tests/unit/test_config.py -v
-```
-
-### Requisitos de Cobertura
-
-- Novas funções públicas devem ter testes
-- Casos de borda (NaN, vazios, tipos errados) devem ser testados
-- Testes devem ser independentes e reprodutíveis
+- Formatação e lint: `ruff format` e `ruff check`, com linha de até 80 caracteres e alvo `py311`. Rode `make format` e `make lint`.
+- Tipos: `mypy` em modo `strict` sobre `src` e `tests`. Rode `make typecheck`.
+- Todo módulo começa com `from __future__ import annotations`, e todas as funções têm type hints.
+- Idioma: a documentação em Markdown e os templates do GitHub são em pt-BR. O código, as docstrings, a ajuda da CLI, as mensagens de exceção e de log e os comentários do `config.example.toml` são em inglês.
+- Siga também o DOC-DIRECTIVES.md distribuído com o nwp-core, que a seção [Documentação](#documentação) mostra como ler.
 
 ---
 
-## 📝 Documentação
+## Testes
 
-### Docstrings
+Os testes ficam em `tests/`:
 
-Todas as funções e classes públicas devem ter documentação completa:
+- `tests/unit`: testes unitários de cada módulo.
+- `tests/integration`: a execução completa com armazenamento local e com S3 simulado (moto).
+- `tests/cli`: a CLI executada em processos filhos.
+- `tests/surface`: snapshots do schema da configuração, das opções da CLI, dos nomes de ambiente e do resumo da execução, o teste do diff da API, a verificação do wheel e o teste da tabela de códigos de saída.
+- `tests/regression`: o golden, o determinismo, a procedência da fixture e a linha de base de persistência.
+- `tests/fixtures/goes_cod`: o recorte de regressão, escrito como texto em `tests/fixtures/goes_cod/frames.toml` e convertido em Parquet durante o teste.
 
-```python
-class CloudMotionForecast:
-    """
-    Previsão de movimento de nuvens usando fluxo óptico.
+Comandos:
 
-    Esta classe implementa nowcasting de Cloud Optical Depth (COD)
-    usando o método Lucas-Kanade para estimação de movimento e
-    extrapolação Lagrangiana para projeção temporal.
+```bash
+make test              # todos os testes
+make test-unit         # tests/unit
+make test-integration  # tests/integration
+make test-cov          # testes com relatório de cobertura em htmlcov/
 
-    Attributes:
-        cod: DataArray com histórico de COD (time × lat × lon).
-        motion_field: Campo de velocidade estimado (2 × lat × lon).
-        cod_forecast: Previsão gerada pelo último forecast().
-
-    Example:
-        >>> cod_history = load_cod_data()
-        >>> forecast = CloudMotionForecast(cod_history)
-        >>> prediction = forecast.forecast(n_leadtimes=6)
-    """
+# Um único arquivo
+uv run --no-sync pytest tests/unit/test_config.py -q
 ```
 
-### Atualizando Documentação
+Regras:
 
-- Atualize o README se adicionar funcionalidades visíveis ao usuário
-- Atualize ARCHITECTURE.md se modificar a estrutura do sistema
-- Atualize CHANGELOG.md para mudanças relevantes
+- Não versione fixtures binárias. O gate de identificadores não consegue examinar binários, por isso o recorte vive como texto em `frames.toml`.
+- Os snapshots de `tests/surface` só são regenerados com `NWP_UPDATE_SNAPSHOTS=1`, e a mudança é revisada no diff do pull request.
+- O golden só é reescrito por `pytest --update-golden`, que falha de propósito ao terminar. Um novo golden exige entrada no `CHANGELOG.md`.
+
+---
+
+## Documentação
+
+- O [README.md](README.md) é a referência do usuário. A seção `## Códigos de saída` é fixada por um teste: se você mudar um código de saída, atualize a tabela e o teste juntos.
+- O [ARCHITECTURE.md](ARCHITECTURE.md) descreve a estrutura do pacote e o fluxo de dados. Atualize-o ao mudar essa estrutura.
+- O [CHANGELOG.md](CHANGELOG.md) lista as mudanças relevantes de cada versão.
 - Siga o DOC-DIRECTIVES.md distribuído com o nwp-core (`nwp_core/standards/DOC-DIRECTIVES.md`), o padrão de documentação e de release do programa. Este comando imprime a revisão instalada:
 
   ```bash
@@ -299,86 +187,57 @@ class CloudMotionForecast:
 
 ---
 
-## 🔄 Processo de Pull Request
+## Processo de pull request
 
-### Antes de Abrir o PR
+### Antes de abrir o pull request
 
-1. **Sincronize com upstream**
+1. Sincronize com o upstream:
 
    ```bash
    git fetch upstream
    git rebase upstream/main
    ```
 
-2. **Execute verificações locais**
+2. Rode as verificações locais:
 
    ```bash
-   uv run ruff check .               # Linting
-   uv run ruff format .              # Formatação
-   uv run mypy                       # Type checking
-   uv run pytest tests/              # Testes
+   make lint typecheck test
+   make gate
    ```
 
-3. **Commits organizados**
-   - Mensagens descritivas em português ou inglês
-   - Um commit por mudança lógica
-   - Formato: `tipo: descrição curta`
-     - `feat:` nova funcionalidade
-     - `fix:` correção de bug
-     - `docs:` documentação
-     - `test:` testes
-     - `refactor:` refatoração
+   O `make gate` examina os commits desde a `main` à procura de identificadores internos e falha se achar algum.
 
-### Template do PR
+3. Use commits convencionais, um por mudança lógica: `feat:` para funcionalidade nova, `fix:` para correção, `docs:` para documentação, `test:` para testes, `refactor:` para refatoração e `chore:` para manutenção.
 
-```markdown
-## Descrição
-
-Breve descrição das mudanças.
-
-## Tipo de Mudança
-
-- [ ] Bug fix
-- [ ] Nova feature
-- [ ] Breaking change
-- [ ] Documentação
-
-## Checklist
-
-- [ ] Testes adicionados/atualizados
-- [ ] Documentação atualizada
-- [ ] CI passa sem erros
-- [ ] Código segue os padrões do projeto
-
-## Issues Relacionadas
-
-Closes #123
-```
+4. Preencha o [template do pull request](.github/PULL_REQUEST_TEMPLATE.md), que o GitHub carrega ao abrir o PR.
 
 ### Revisão
 
-- PRs requerem pelo menos 1 aprovação
-- CI deve passar (testes, lint, type check)
-- Discussões devem ser resolvidas antes do merge
+- O pull request precisa de pelo menos uma aprovação.
+- O CI precisa passar: testes, lint, verificação de tipos e gate. Pull requests de forks não recebem o token de leitura do nwp-core, e o CI deles falha até que um mantenedor reexecute as verificações.
+- Os comentários da revisão precisam estar resolvidos antes do merge.
 
 ---
 
-## 🏷️ Versionamento
+## Versionamento
 
-Seguimos [Semantic Versioning](https://semver.org/):
+Seguimos o [Semantic Versioning](https://semver.org/):
 
-- **MAJOR**: mudanças incompatíveis na API
-- **MINOR**: novas funcionalidades compatíveis
-- **PATCH**: correções de bugs compatíveis
+- **MAJOR**: mudanças incompatíveis na superfície pública.
+- **MINOR**: funcionalidades novas compatíveis.
+- **PATCH**: correções compatíveis.
 
-Atualize o `app/__init__.py` e `CHANGELOG.md` ao lançar versões.
+Enquanto a versão for 0.x, uma quebra da superfície pública (`cod_nowcast_ons`, `cod_nowcast_ons.cli`, as opções e os nomes de ambiente da CLI, o resumo da execução e o `cod.parquet`) sobe a versão minor. A quebra entra em `## [Unreleased]` do `CHANGELOG.md`, sob `### Breaking`, e cada item começa com o caminho pontuado, entre crases, do que quebrou. O teste `tests/surface/test_api_diff.py` lê esses itens quando uma tag `v*` está visível.
+
+A versão fica em um só lugar: `project.version` no `pyproject.toml`. O `cod_nowcast_ons.__version__` lê os metadados instalados com `importlib.metadata`. Para subir a versão, edite somente o `pyproject.toml` e rode `uv lock`, que atualiza a linha da versão do próprio projeto no `uv.lock`.
+
+Os mantenedores criam a tag anotada `vX.Y.Z` na `main` depois do merge.
 
 ---
 
-## ❓ Dúvidas?
+## Dúvidas
 
-- Abra uma [Discussion](https://github.com/rjmalves/cod-nowcast-ons/discussions) para perguntas gerais
-- Use [Issues](https://github.com/rjmalves/cod-nowcast-ons/issues) para bugs e features
-- Consulte a documentação existente
+- Use as [Issues](https://github.com/rjmalves/cod-nowcast-ons/issues) para bugs, funcionalidades e perguntas.
+- Consulte antes o [README.md](README.md) e o [ARCHITECTURE.md](ARCHITECTURE.md).
 
-Obrigado por contribuir! 🎉
+Obrigado por contribuir!
