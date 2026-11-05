@@ -37,12 +37,14 @@ def run_regression(input_root: Path, out_dir: Path) -> Path:
     """Run ``cod_nowcast_ons.nowcast`` on the frames under ``input_root``.
 
     This is the only call into the code under test. ``input_root`` is the gold
-    layout root, which this adapter passes to ``[input]`` unchanged.
+    layout root, which this adapter passes to ``[input]`` unchanged. It creates
+    ``out_dir`` when missing, so the run writes into a folder that exists.
 
     Returns:
         The path of the ``cod.parquet`` written under ``out_dir``.
     """
     name, lat, lon = SUBGRID
+    out_dir.mkdir(parents=True, exist_ok=True)
     nowcast(
         NowcastConfig(
             base_datetime=SLOTS[P],

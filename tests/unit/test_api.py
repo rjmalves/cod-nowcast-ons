@@ -56,9 +56,11 @@ def _config(
 
 
 def _late_config(frames_root: Path, tmp_path: Path) -> NowcastConfig:
+    out = tmp_path / "out"
+    out.mkdir()
     return _config(
         frames_root,
-        tmp_path / "out",
+        out,
         SLOTS[-1] + 2 * SLOT,
         num_past=2,
         staleness=timedelta(minutes=20),
@@ -77,6 +79,7 @@ def test_nowcast_succeeds_on_the_fixture_frames(
     frames_root: Path, tmp_path: Path
 ) -> None:
     out = tmp_path / "out"
+    out.mkdir()
     config = _config(frames_root, out, SLOTS[P], num_past=P)
 
     outcome = nowcast(config)

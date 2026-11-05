@@ -7,8 +7,9 @@ num_future_samples = 3
 [input]
 uri = "/fixtures"
 
+# The output root must exist; /tmp is the container's writable tmpfs.
 [output]
-uri = "/tmp/nowcast"
+uri = "/tmp"
 
 [[subgrids]]
 name = "FIXTURE"
