@@ -30,6 +30,7 @@ usage() {
 Usage: sudo ./setup.sh [options]
 
 Install $APP_NAME CLI application.
+Requires uv 0.9.22 or newer in PATH (for sudo, in root's PATH).
 
 Options:
 	-u, --user      Install for current user only (no sudo required).
@@ -90,7 +91,6 @@ fi
 uninstall() {
 	log "Uninstalling $APP_NAME..."
 	
-	local venv_dir="$INSTALL_DIR/venv"
 	local symlink="$BIN_DIR/$ENTRYPOINT_NAME"
 	
 	if [[ -L "$symlink" ]]; then
@@ -126,6 +126,10 @@ if [[ $CUR_MAJOR -lt $MIN_MAJOR || ( $CUR_MAJOR -eq $MIN_MAJOR && $CUR_MINOR -lt
 	error "Python >= $MIN_MAJOR.$MIN_MINOR required (found $PY_VERSION)."
 fi
 
+if ! command -v uv >/dev/null 2>&1; then
+	error "uv not found in PATH. Install uv 0.9.22 or newer: https://docs.astral.sh/uv/"
+fi
+
 VENV_DIR="$INSTALL_DIR/venv"
 
 # Handle existing installation
@@ -147,33 +151,12 @@ log "Copying application files..."
 cp -r "$PROJECT_ROOT/app" "$INSTALL_DIR/"
 cp "$PROJECT_ROOT/main.py" "$INSTALL_DIR/"
 cp "$PROJECT_ROOT/pyproject.toml" "$INSTALL_DIR/"
-cp "$PROJECT_ROOT/README.md" "$INSTALL_DIR/" 2>/dev/null || true
+cp "$PROJECT_ROOT/uv.lock" "$INSTALL_DIR/"
+cp "$PROJECT_ROOT/README.md" "$INSTALL_DIR/"
 
-if [[ -f "$PROJECT_ROOT/.env.example" ]]; then
-	cp "$PROJECT_ROOT/.env.example" "$INSTALL_DIR/"
-fi
-
-# Create virtual environment in installation directory
-log "Creating virtual environment in $VENV_DIR"
-"$PYTHON_BIN" -m venv "$VENV_DIR"
-
-# Activate and install
-source "$VENV_DIR/bin/activate"
-
-log "Upgrading pip, setuptools, wheel..."
-python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1
-
-log "Installing $APP_NAME..."
+log "Installing $APP_NAME with uv into $VENV_DIR"
 cd "$INSTALL_DIR"
-pip install . 2>&1
-
-# Create .env if needed
-if [[ ! -f "$INSTALL_DIR/.env" && -f "$INSTALL_DIR/.env.example" ]]; then
-	cp "$INSTALL_DIR/.env.example" "$INSTALL_DIR/.env"
-	log "Created .env file from .env.example"
-fi
-
-deactivate
+UV_PROJECT_ENVIRONMENT="$VENV_DIR" UV_PYTHON_DOWNLOADS=never uv sync --locked --no-dev --no-editable --python "$PYTHON_BIN"
 
 # Create bin directory if it doesn't exist
 mkdir -p "$BIN_DIR"
