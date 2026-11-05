@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import shutil
-import socket
 from datetime import UTC
 from pathlib import Path
-from typing import NoReturn
 
 import polars as pl
 import pytest
@@ -46,22 +44,6 @@ def _plot_config(
         ),
         postprocessing=Postprocessing(plots=True, shapefile=shapefile),
     )
-
-
-@pytest.fixture
-def offline_maps(
-    monkeypatch: pytest.MonkeyPatch, generated_shapefile: Path
-) -> None:
-    def refuse(*args: object, **kwargs: object) -> NoReturn:
-        msg = "network access is disabled"
-        raise OSError(msg)
-
-    monkeypatch.setattr(socket.socket, "connect", refuse)
-    monkeypatch.setattr(
-        "cartopy.io.shapereader.natural_earth",
-        lambda **_: str(generated_shapefile),
-    )
-    monkeypatch.setattr("cartopy.feature._NATURAL_EARTH_GEOM_CACHE", {})
 
 
 @pytest.mark.integration
