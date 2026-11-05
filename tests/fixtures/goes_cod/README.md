@@ -24,6 +24,23 @@ prévia, feita sem executar o modelo, deu:
 - picos de Pearson por par: `0.877`, `0.847`, `0.880` e `0.912`;
 - pixels finitos às 00:30, 00:40 e 00:50: `638`, `663` e `698`.
 
+A fixture de regressão atual é o recorte `GOES_COD_BR` da janela nominal
+de 2024-02-07 00:00 a 00:40 UTC, o primeiro candidato que passa na
+triagem abaixo. Ele cobre latitude -23 a -20 e longitude -50 a -47, ambas
+inclusivas: uma grade de 76x76 pontos com passo de 0,04 grau. `frames.toml`
+guarda os 5 quadros como texto, um por linha da tabela:
+
+| arquivo | horário nominal | horário da varredura | sha256 da fonte | sha256 canônico |
+| --- | --- | --- | --- | --- |
+| `GOES_COD_BR_20240207-0000.parquet` | 2024-02-07T00:00Z | 2024-02-07T00:00:20.324134Z | `8e0bd57ca2b9fcba5d83a32306843a6fd3d1602546fdda2fb8f52bb56b66f494` | `243f08e5e160c552e663a95fbcb750d09ea521644ca3afa1ab60be30249e232e` |
+| `GOES_COD_BR_20240207-0010.parquet` | 2024-02-07T00:10Z | 2024-02-07T00:10:20.323481Z | `b114e816ed089d922125c41f241916108e5c57cef712f2df80f9691c090add4f` | `bf756837b5f35ebe9d4610399e9641fb1c3e5f13e958e02c257143cd6b563434` |
+| `GOES_COD_BR_20240207-0020.parquet` | 2024-02-07T00:20Z | 2024-02-07T00:20:20.324623Z | `b171e18689193ac33008b8f12a6be4e6681e17e78a5b58aaef488e568c0fadc1` | `bf251428d7200ceeefe32542d7f79122516810e3780da74cf2ed4d86cd616c1a` |
+| `GOES_COD_BR_20240207-0030.parquet` | 2024-02-07T00:30Z | 2024-02-07T00:30:20.323967Z | `a7a0cb019cf3e77fc2f5ef8489cf7f49b45bb1883210f977bec54bab128f9a9b` | `f3548928b25815e8160b128556b9544b8da9b7a524f1451debdad2c036bff585` |
+| `GOES_COD_BR_20240207-0040.parquet` | 2024-02-07T00:40Z | 2024-02-07T00:40:20.325117Z | `15da6e9b0efd4d0a2c53c553f5908c3c2c0bdbdd12b3fc7c14b79e753fd2b7d9` | `0a05ef5c3389c34e329754d4cfe48b29cb62c2cc56b8fe64e541a07ba4a2f38a` |
+
+`python -m tests.fixtures.goes_cod.cut verify DIR` confere de novo o texto de
+`frames.toml` contra os arquivos-fonte em `DIR`.
+
 ## Configuração da linha de base
 
 - `P = 2` quadros passados e `L = 3` antecedências;
