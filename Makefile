@@ -2,7 +2,7 @@
 
 IMAGE ?= cod-nowcast-ons:local
 IMAGE_SOURCE ?= https://github.com/rjmalves/cod-nowcast-ons
-IMPORT_CHAIN := import cv2, pysteps; from pysteps import motion
+IMPORT_CHAIN := import cod_nowcast_ons, cv2, pysteps; from pysteps import motion
 
 help:
 	@echo "cod-nowcast-ons - Installation and Management"
@@ -76,7 +76,7 @@ test-integration:
 
 test-cov:
 	@echo "Running tests with coverage..."
-	@uv run --no-sync pytest --cov=app --cov-report=html --cov-report=term -v
+	@uv run --no-sync pytest --cov-report=html --cov-report=term -v
 	@echo "Coverage report generated in htmlcov/"
 
 test-s3:

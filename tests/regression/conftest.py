@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from app.inference import InferenceManager
-from app.internal.config import Config, PostprocessingConfig, SubgridConfig
-from app.readers import InputData
-from app.writers import write_inference_results
+from cod_nowcast_ons._config import Config, PostprocessingConfig, SubgridConfig
+from cod_nowcast_ons._forecast import InferenceManager
+from cod_nowcast_ons._frames import InputData
+from cod_nowcast_ons._output import write_inference_results
 from tests.fixtures.goes_cod.criteria import L, P, nominal_slot
 from tests.fixtures.goes_cod.materialize import (
     FRAMES_PREFIX,
@@ -41,8 +41,8 @@ def run_regression(input_root: Path, out_dir: Path) -> Path:
 
     This is the only call into the code under test, which epic 03 retargets
     to ``cod_nowcast_ons.nowcast``. ``input_root`` is the gold layout root,
-    which the retargeted adapter passes to ``[input]`` unchanged. ``app/``
-    reads the frames directly under its input, so this adapter appends
+    which the retargeted adapter passes to ``[input]`` unchanged. The frame
+    reader reads the frames directly under its input, so this adapter appends
     ``goes_processed``.
 
     Returns:

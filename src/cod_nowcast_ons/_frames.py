@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 import polars as pl
 import xarray as xr
 
-from app.internal.config import SubgridConfig
-from app.storage import StorageFactory
+from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._storage import StorageFactory
 
 
 @dataclass

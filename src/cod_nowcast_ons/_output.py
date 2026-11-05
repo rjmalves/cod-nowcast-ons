@@ -1,9 +1,9 @@
 import pandas as pd
 
-from app.inference import InferenceResult
-from app.internal.config import Config
-from app.storage import StorageFactory
-from app.utils.plots import generate_cod_forecast_gif
+from cod_nowcast_ons._config import Config
+from cod_nowcast_ons._forecast import InferenceResult
+from cod_nowcast_ons._plots import generate_cod_forecast_gif
+from cod_nowcast_ons._storage import StorageFactory
 
 
 def write_inference_results(config: Config, result: InferenceResult) -> None:

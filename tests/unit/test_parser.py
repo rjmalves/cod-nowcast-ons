@@ -1,7 +1,7 @@
 import pytest
 
-from app import __version__
-from app.parser import build_parser
+from cod_nowcast_ons import __version__
+from cod_nowcast_ons.cli import build_parser
 
 
 def test_version_flag_prints_version_and_exits_zero(

@@ -148,8 +148,7 @@ mkdir -p "$INSTALL_DIR"
 
 # Copy application files to installation directory
 log "Copying application files..."
-cp -r "$PROJECT_ROOT/app" "$INSTALL_DIR/"
-cp "$PROJECT_ROOT/main.py" "$INSTALL_DIR/"
+cp -r "$PROJECT_ROOT/src" "$INSTALL_DIR/"
 cp "$PROJECT_ROOT/pyproject.toml" "$INSTALL_DIR/"
 cp "$PROJECT_ROOT/uv.lock" "$INSTALL_DIR/"
 cp "$PROJECT_ROOT/README.md" "$INSTALL_DIR/"

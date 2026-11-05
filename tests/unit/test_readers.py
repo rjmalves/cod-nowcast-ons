@@ -6,8 +6,8 @@ import polars as pl
 import pytest
 import xarray as xr
 
-from app.internal.config import SubgridConfig
-from app.readers import InputData, SubgridInputData
+from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._frames import InputData, SubgridInputData
 
 
 class TestSubgridInputData:

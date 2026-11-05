@@ -4,10 +4,13 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.inference import InferenceManager
-from app.internal.config import Config, PostprocessingConfig, SubgridConfig
-from app.readers import InputData
-from app.writers import write_cloud_motion_plots, write_inference_results
+from cod_nowcast_ons._config import Config, PostprocessingConfig, SubgridConfig
+from cod_nowcast_ons._forecast import InferenceManager
+from cod_nowcast_ons._frames import InputData
+from cod_nowcast_ons._output import (
+    write_cloud_motion_plots,
+    write_inference_results,
+)
 
 
 @pytest.mark.integration

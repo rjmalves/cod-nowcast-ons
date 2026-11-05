@@ -58,7 +58,9 @@ def _meta() -> dict[str, object]:
     return {
         "format": 1,
         "code_commit": _git_sha("code_commit", "rev-parse", "HEAD"),
-        "app_tree": _git_sha("app_tree", "rev-parse", "HEAD:app"),
+        "app_tree": _git_sha(
+            "app_tree", "rev-parse", "HEAD:src/cod_nowcast_ons"
+        ),
         "criteria_commit": _git_sha(
             "criteria_commit", *added, f"{_FIXTURE_DIR}/criteria.py"
         ),

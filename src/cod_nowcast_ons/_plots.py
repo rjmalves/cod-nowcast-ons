@@ -12,7 +12,7 @@ from matplotlib import colors, rcParams
 from matplotlib.image import AxesImage
 from PIL import Image
 
-from app.storage import LocalBackend, StorageBackend
+from cod_nowcast_ons._storage import LocalBackend, StorageBackend
 
 if TYPE_CHECKING:  # pragma: no cover
     from cartopy.mpl.geoaxes import GeoAxes

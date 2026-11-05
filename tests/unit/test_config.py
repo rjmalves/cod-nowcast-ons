@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.internal.config import Config, PostprocessingConfig, SubgridConfig
+from cod_nowcast_ons._config import Config, PostprocessingConfig, SubgridConfig
 
 
 class TestSubgridConfig:

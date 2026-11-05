@@ -30,8 +30,7 @@ RUN --mount=type=secret,id=nwp_core_token,required=false \
     GIT_CONFIG_KEY_0=credential.https://github.com.helper \
     GIT_CONFIG_VALUE_0='!f() { if [ -f /run/secrets/nwp_core_token ]; then echo username=x-access-token; echo "password=$(cat /run/secrets/nwp_core_token)"; fi; }; f' \
     uv sync --locked --no-dev --no-editable --no-install-project
-COPY app/ app/
-COPY main.py ./
+COPY src/ src/
 RUN --mount=type=secret,id=nwp_core_token,required=false \
     GIT_CONFIG_COUNT=1 \
     GIT_CONFIG_KEY_0=credential.https://github.com.helper \

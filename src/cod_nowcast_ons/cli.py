@@ -1,15 +1,34 @@
+import argparse
 import sys
 from pathlib import Path
 from traceback import print_exc
 
-from app.inference import InferenceManager
-from app.internal.config import Config
-from app.parser import build_parser
-from app.readers import InputData
-from app.writers import (
+from cod_nowcast_ons import __version__
+from cod_nowcast_ons._config import Config
+from cod_nowcast_ons._forecast import InferenceManager
+from cod_nowcast_ons._frames import InputData
+from cod_nowcast_ons._output import (
     write_cloud_motion_plots,
     write_inference_results,
 )
+
+__all__ = ["main"]
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Cloud Optical Depth forecasts using GOES satellite images and pySTEPS"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config.jsonc",
+        help="Path to configuration JSON file (default: config.json)",
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
+    )
+    return parser
 
 
 def load_config(config_path: str) -> Config:

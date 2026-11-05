@@ -10,7 +10,7 @@ import pytest
 import shapefile
 import xarray as xr
 
-from app.internal.config import SubgridConfig
+from cod_nowcast_ons._config import SubgridConfig
 from tests.fixtures.goes_cod.materialize import (
     FRAMES_PREFIX,
     SOURCE,
@@ -36,7 +36,7 @@ def test_data_dir(tmp_path: Path) -> Path:
     """Folder of the frames materialized from the committed text source.
 
     The frames are written under the gold layout, so the returned
-    ``goes_processed`` folder is the one that ``app/`` reads.
+    ``goes_processed`` folder is the one that the frame reader reads.
     """
     root = tmp_path / "frames"
     root.mkdir()
@@ -127,7 +127,7 @@ def sample_cod_dataarray() -> xr.DataArray:
         ),
     )
 
-    # Convert to xarray (this is how app does it)
+    # Convert to xarray (this is how the frame reader does it)
     return df.to_xarray()["cod"]
 
 

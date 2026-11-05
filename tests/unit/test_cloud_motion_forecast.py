@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from app.services.cloud_motion_forecast import CloudMotionForecast
+from cod_nowcast_ons._forecast import CloudMotionForecast
 
 
 class TestCloudMotionForecast:

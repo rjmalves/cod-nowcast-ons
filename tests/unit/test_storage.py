@@ -3,7 +3,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.storage import LocalBackend, S3Backend, StorageFactory
+from cod_nowcast_ons._storage import LocalBackend, S3Backend, StorageFactory
 
 
 class TestStorageFactory:
