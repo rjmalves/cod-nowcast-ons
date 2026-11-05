@@ -13,6 +13,18 @@ Desenvolvido pelo [Operador Nacional do Sistema Elétrico (ONS)](https://www.ons
 
 ---
 
+## Status
+
+Até a primeira publicação do nwp-core no PyPI, valem estas limitações:
+
+- A ferramenta obtém o nwp-core de um repositório git privado, fixado por commit em `pyproject.toml` (`[tool.uv.sources]`).
+- Sem acesso de leitura ao nwp-core, ninguém consegue instalar a ferramenta nem construir a sua imagem.
+- O CI falha em pull requests vindos de forks, porque eles não recebem o token de leitura `NWP_CORE_READ_TOKEN`.
+- Toda rota de instalação usa uv (`uv sync --locked`, `setup.sh` e a imagem). O pip não é suportado neste período, porque ignora a fonte fixada e procuraria o nwp-core no PyPI. O `sudo ./setup.sh` exige uv e esse acesso de leitura também para o root.
+- Esta seção será removida quando o nwp-core for publicado.
+
+---
+
 ## 📋 Visão Geral
 
 Este projeto implementa um pipeline de nowcasting que:
@@ -98,13 +110,8 @@ Este projeto implementa um pipeline de nowcasting que:
 git clone https://github.com/rjmalves/cod-nowcast-ons.git
 cd cod-nowcast-ons
 
-# Instale com uv (recomendado)
-uv sync
-
-# Ou com pip tradicional
-python -m venv venv
-source venv/bin/activate
-pip install -e .
+# Requer uv 0.9.22 ou mais novo e acesso de leitura ao nwp-core (veja Status)
+uv sync --locked
 ```
 
 ### Execução Rápida
@@ -126,8 +133,8 @@ cod-nowcast-ons --config config.jsonc
 ### Usando Docker
 
 ```bash
-# Build da imagem
-docker build -t cod-nowcast-ons .
+# NWP_CORE_READ_TOKEN: token de leitura do nwp-core (veja Status)
+docker buildx build --load --secret id=nwp_core_token,env=NWP_CORE_READ_TOKEN -t cod-nowcast-ons .
 
 # Execução no diretório atual: config e caminhos relativos a /work
 docker run --rm --read-only --tmpfs /tmp --user "$(id -u):$(id -g)" \

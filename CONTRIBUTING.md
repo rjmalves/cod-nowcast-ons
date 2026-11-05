@@ -63,14 +63,11 @@ cd cod-nowcast-ons
 # Adicione o upstream
 git remote add upstream https://github.com/rjmalves/cod-nowcast-ons.git
 
-# Instale as dependências com uv
-uv sync --all-extras --dev
-
-# Ou com pip tradicional
-python -m venv venv
-source venv/bin/activate
-pip install -e ".[dev]"
+# Instale as dependências com uv (inclui o grupo dev)
+uv sync --locked
 ```
+
+Enquanto o nwp-core vem de um repositório git privado, o `uv sync` exige acesso de leitura a ele e os pull requests vindos de forks falham no CI. Veja [Status](README.md#status).
 
 ### Verificando a Instalação
 
