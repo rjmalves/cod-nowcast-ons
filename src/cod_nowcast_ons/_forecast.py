@@ -114,18 +114,16 @@ def predict_subgrids(
     reader: InputData,
     subgrids: Sequence[Subgrid],
     *,
-    issue_time: datetime,
-    num_frames: int,
+    slots: Sequence[datetime],
     num_future_samples: int,
 ) -> InferenceResult:
-    """Forecast every subgrid from the frames before ``issue_time``.
+    """Forecast every subgrid from the frames at ``slots``.
 
-    ``issue_time`` is naive UTC. The frames read are
-    ``issue_time - 10 min * i`` for ``i = num_frames..1``.
+    ``slots`` are naive UTC, oldest first, as the input guard selected them.
     """
     results = {}
     for subgrid in subgrids:
-        subgrid_data = reader.for_subgrid(subgrid, num_frames, issue_time)
+        subgrid_data = reader.for_subgrid(subgrid, slots)
         steps = CloudMotionForecast(subgrid_data)
         cod = steps.forecast(num_future_samples)
         results[subgrid.name] = SubgridResult(

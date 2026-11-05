@@ -1,20 +1,17 @@
-import posixpath
+from __future__ import annotations
+
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Final
 
 import polars as pl
 import xarray as xr
-from nwp_core.storage import StorageLocation
+from nwp_core.storage import Storage
 
 from cod_nowcast_ons._config import Subgrid
-from cod_nowcast_ons._storage import StorageFactory
 
 FRAMES_PREFIX: Final = "goes_processed"
-
-
-def frames_folder(location: StorageLocation) -> str:
-    return posixpath.join(location.uri, FRAMES_PREFIX)
 
 
 def frame_key(slot: datetime) -> str:
@@ -34,22 +31,17 @@ class SubgridInputData:
         return f"GOES_COD_BR_{time.strftime('%Y%m%d-%H%M')}.parquet"
 
     @classmethod
-    def from_parquet(
-        cls, config: Subgrid, time: datetime, directory: str
-    ) -> "SubgridInputData":
-        storage = StorageFactory.get_storage(directory)
+    def from_storage(
+        cls, config: Subgrid, time: datetime, storage: Storage
+    ) -> SubgridInputData:
+        with storage.open_read(frame_key(time)) as stream:
+            frame = pl.read_parquet(stream)
 
-        filepath = storage.join_path(directory, cls.goes_input_filename(time))
-
-        df = (
-            storage.read_parquet(filepath)
-            .filter(
-                (pl.col("latitude") >= config.lat[0])
-                & (pl.col("latitude") <= config.lat[1])
-                & (pl.col("longitude") >= config.lon[0])
-                & (pl.col("longitude") <= config.lon[1])
-            )
-            .collect()
+        df = frame.filter(
+            (pl.col("latitude") >= config.lat[0])
+            & (pl.col("latitude") <= config.lat[1])
+            & (pl.col("longitude") >= config.lon[0])
+            & (pl.col("longitude") <= config.lon[1])
         )
         df = df.with_columns(
             [
@@ -72,22 +64,15 @@ class InputData:
         "longitude",
     ]
 
-    def __init__(self, path: str):
-        self.path = path
+    def __init__(self, storage: Storage):
+        self.storage = storage
 
     def for_subgrid(
-        self,
-        subgrid: Subgrid,
-        num_past_samples: int,
-        base_datetime: datetime,
+        self, subgrid: Subgrid, slots: Sequence[datetime]
     ) -> xr.DataArray:
-        goes_times = [
-            base_datetime - timedelta(minutes=10 * i)
-            for i in reversed(range(1, num_past_samples + 1))
-        ]
         cod_dfs = [
-            SubgridInputData.from_parquet(subgrid, time, self.path).cod
-            for time in goes_times
+            SubgridInputData.from_storage(subgrid, slot, self.storage).cod
+            for slot in slots
         ]
         cod_df: pl.DataFrame = pl.concat(cod_dfs).sort(self.INDEX_COLS)
         cod_pd_df = cod_df.to_pandas().set_index(self.INDEX_COLS)

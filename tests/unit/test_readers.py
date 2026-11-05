@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -5,9 +7,32 @@ import numpy as np
 import polars as pl
 import pytest
 import xarray as xr
+from nwp_core.contracts import registry
+from nwp_core.errors import ObjectNotFoundError
+from nwp_core.storage import Storage, StorageLocation, open_storage
 
 from cod_nowcast_ons._config import Subgrid
-from cod_nowcast_ons._frames import InputData, SubgridInputData
+from cod_nowcast_ons._frames import (
+    FRAMES_PREFIX,
+    InputData,
+    SubgridInputData,
+    frame_key,
+)
+from tests.fixtures.goes_cod.criteria import nominal_slot
+from tests.fixtures.goes_cod.materialize import SOURCE, load_source
+
+_, _, _FRAMES = load_source(SOURCE)
+AWARE_SLOTS = [nominal_slot(frame.name) for frame in _FRAMES]
+SLOTS = [slot.replace(tzinfo=None) for slot in AWARE_SLOTS]
+
+
+def _storage(root: Path) -> Storage:
+    return open_storage(StorageLocation(uri=str(root)))
+
+
+def _write_frame(root: Path, time: datetime, frame: pl.DataFrame) -> None:
+    (root / FRAMES_PREFIX).mkdir(exist_ok=True)
+    frame.write_parquet(root / frame_key(time))
 
 
 class TestSubgridInputData:
@@ -23,69 +48,53 @@ class TestSubgridInputData:
         filename2 = SubgridInputData.goes_input_filename(time2)
         assert filename2 == "GOES_COD_BR_20241231-2359.parquet"
 
+    def test_frame_key_equals_the_goes_cod_frames_key(self) -> None:
+        """The frame key is the key the goes.cod_frames contract renders."""
+        template = registry().get("goes.cod_frames", "1.0").template
+        for slot in AWARE_SLOTS:
+            assert frame_key(slot) == template.render({"cycle": slot})
+            assert frame_key(slot.replace(tzinfo=None)) == frame_key(slot)
+
     @pytest.mark.integration
-    def test_from_parquet_local(
-        self, test_data_dir: Path, sample_subgrid_config: Subgrid
+    def test_from_storage_reads_the_fixture_frame(
+        self, layout_root: Path, sample_subgrid_config: Subgrid
     ) -> None:
-        """Test loading data from local parquet file."""
-        # Use test fixture data
-        time = datetime(2024, 8, 1, 0, 0)
+        """Test loading a frame of the fixture layout through storage."""
+        data = SubgridInputData.from_storage(
+            sample_subgrid_config, SLOTS[0], _storage(layout_root)
+        )
 
-        # Get test file path
-        test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
-        if not test_files:
-            pytest.skip("Test data not available")
+        assert data.name == sample_subgrid_config.name
+        assert data.latitude_range == sample_subgrid_config.lat
+        assert data.longitude_range == sample_subgrid_config.lon
+        assert data.time == SLOTS[0]
+        assert isinstance(data.cod, pl.DataFrame)
+        assert "latitude" in data.cod.columns
+        assert "longitude" in data.cod.columns
+        assert "cod" in data.cod.columns
+        assert "time" in data.cod.columns
+        assert len(data.cod) > 0
 
-        # Rename for test (temporarily)
-        import shutil
-
-        expected_name = SubgridInputData.goes_input_filename(time)
-        expected_path = test_data_dir / expected_name
-
-        # Copy with expected name if needed
-        if not expected_path.exists():
-            shutil.copy(test_files[0], expected_path)
-
-        try:
-            data = SubgridInputData.from_parquet(
-                sample_subgrid_config, time, str(test_data_dir)
-            )
-
-            assert data.name == sample_subgrid_config.name
-            assert data.latitude_range == sample_subgrid_config.lat
-            assert data.longitude_range == sample_subgrid_config.lon
-            assert data.time == time
-            assert isinstance(data.cod, pl.DataFrame)
-            assert "latitude" in data.cod.columns
-            assert "longitude" in data.cod.columns
-            assert "cod" in data.cod.columns
-            assert "time" in data.cod.columns
-        finally:
-            # Cleanup
-            if expected_path.exists() and expected_path != test_files[0]:
-                expected_path.unlink()
-
-    def test_from_parquet_filters_by_subgrid(
+    def test_from_storage_filters_by_subgrid(
         self, tmp_path: Path, sample_subgrid_config: Subgrid
     ) -> None:
         """Test that data is filtered by subgrid bounds."""
-        # Create test parquet with data outside and inside bounds
-        test_data = pl.DataFrame(
-            {
-                "latitude": [-25.0, -22.0, -19.0],
-                "longitude": [-51.0, -49.0, -48.0],
-                "cod": [1.0, 2.0, 3.0],
-                "time": [datetime(2024, 8, 1)] * 3,
-            }
+        time = datetime(2024, 8, 1)
+        _write_frame(
+            tmp_path,
+            time,
+            pl.DataFrame(
+                {
+                    "latitude": [-25.0, -22.0, -19.0],
+                    "longitude": [-51.0, -49.0, -48.0],
+                    "cod": [1.0, 2.0, 3.0],
+                    "time": [time] * 3,
+                }
+            ),
         )
 
-        test_file = tmp_path / SubgridInputData.goes_input_filename(
-            datetime(2024, 8, 1)
-        )
-        test_data.write_parquet(test_file)
-
-        data = SubgridInputData.from_parquet(
-            sample_subgrid_config, datetime(2024, 8, 1), str(tmp_path)
+        data = SubgridInputData.from_storage(
+            sample_subgrid_config, time, _storage(tmp_path)
         )
 
         assert len(data.cod) == 1
@@ -100,47 +109,42 @@ class TestSubgridInputData:
 class TestInputData:
     """Test InputData reader."""
 
-    def test_initialization(self) -> None:
+    def test_initialization(self, tmp_path: Path) -> None:
         """Test InputData initialization."""
-        reader = InputData("data/input")
-        assert reader.path == "data/input"
+        storage = _storage(tmp_path)
+        reader = InputData(storage)
+        assert reader.storage is storage
 
     def test_index_cols(self) -> None:
         """Test INDEX_COLS constant."""
         assert InputData.INDEX_COLS == ["time", "latitude", "longitude"]
 
-    def test_for_subgrid_returns_xarray(
-        self, sample_cod_dataarray: xr.DataArray, tmp_path: Path
-    ) -> None:
+    def test_for_subgrid_returns_xarray(self, tmp_path: Path) -> None:
         """Test that for_subgrid returns xarray DataArray."""
-        # Create test parquet files
         subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
         base_time = datetime(2024, 8, 1, 1, 0)
+        slots = [base_time - timedelta(minutes=10 * (6 - i)) for i in range(6)]
 
-        # Create 6 past time steps
-        for i in range(6):
-            time = base_time - timedelta(minutes=10 * (6 - i))
-
-            # Generate small test data
-            lats = np.linspace(-23.0, -20.0, 5)
-            lons = np.linspace(-50.0, -47.0, 5)
-            lat_grid, lon_grid = np.meshgrid(lats, lons, indexing="ij")
-
-            df = pl.DataFrame(
-                {
-                    "latitude": lat_grid.flatten(),
-                    "longitude": lon_grid.flatten(),
-                    "cod": np.random.gamma(2, 2, size=25).astype(np.float32),
-                    "time": [time] * 25,
-                }
+        lats = np.linspace(-23.0, -20.0, 5)
+        lons = np.linspace(-50.0, -47.0, 5)
+        lat_grid, lon_grid = np.meshgrid(lats, lons, indexing="ij")
+        for time in slots:
+            _write_frame(
+                tmp_path,
+                time,
+                pl.DataFrame(
+                    {
+                        "latitude": lat_grid.flatten(),
+                        "longitude": lon_grid.flatten(),
+                        "cod": np.random.gamma(2, 2, size=25).astype(
+                            np.float32
+                        ),
+                        "time": [time] * 25,
+                    }
+                ),
             )
 
-            filename = SubgridInputData.goes_input_filename(time)
-            df.write_parquet(tmp_path / filename)
-
-        # Test
-        reader = InputData(str(tmp_path))
-        result = reader.for_subgrid(subgrid, 6, base_time)
+        result = InputData(_storage(tmp_path)).for_subgrid(subgrid, slots)
 
         assert isinstance(result, xr.DataArray)
         assert "time" in result.dims
@@ -151,38 +155,29 @@ class TestInputData:
 
     @pytest.mark.integration
     def test_for_subgrid_with_test_data(
-        self, test_data_dir: Path, sample_subgrid_config: Subgrid
+        self, layout_root: Path, sample_subgrid_config: Subgrid
     ) -> None:
         """Test for_subgrid with actual test fixture data."""
-        test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
-        if len(test_files) < 5:
-            pytest.skip("Need at least 5 test files")
-
-        # Parse time from last file
-        last_file = sorted(test_files)[-1]
-        time_str = last_file.stem.split("_")[-1]  # 20240801-0050
-        base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
-
-        reader = InputData(str(test_data_dir))
-        result = reader.for_subgrid(sample_subgrid_config, 4, base_time)
+        reader = InputData(_storage(layout_root))
+        result = reader.for_subgrid(sample_subgrid_config, SLOTS[:4])
 
         assert isinstance(result, xr.DataArray)
         assert result.time.size == 4
 
-        # Check coordinates
         assert result.latitude.min() >= sample_subgrid_config.lat[0]
         assert result.latitude.max() <= sample_subgrid_config.lat[1]
         assert result.longitude.min() >= sample_subgrid_config.lon[0]
         assert result.longitude.max() <= sample_subgrid_config.lon[1]
 
-    def test_for_subgrid_missing_file(self, tmp_path: Path) -> None:
-        """Test that missing file raises appropriate error."""
+    def test_for_subgrid_missing_frame_raises_object_not_found(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that a missing frame raises the storage error."""
         subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
-        reader = InputData(str(tmp_path))
-        base_time = datetime(2024, 8, 1, 1, 0)
+        reader = InputData(_storage(tmp_path))
 
-        with pytest.raises(Exception):  # FileNotFoundError or similar
-            reader.for_subgrid(subgrid, 6, base_time)
+        with pytest.raises(ObjectNotFoundError):
+            reader.for_subgrid(subgrid, SLOTS[:4])
 
 
 @pytest.mark.unit
@@ -193,20 +188,19 @@ class TestReadersDataFlow:
         """Test that SubgridInputData adds time column."""
         subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
         time = datetime(2024, 8, 1, 0, 0)
-
-        # Create minimal test file
-        df = pl.DataFrame(
-            {
-                "latitude": [-22.0],
-                "longitude": [-49.0],
-                "cod": [5.0],
-            }
+        _write_frame(
+            tmp_path,
+            time,
+            pl.DataFrame(
+                {
+                    "latitude": [-22.0],
+                    "longitude": [-49.0],
+                    "cod": [5.0],
+                }
+            ),
         )
 
-        filename = SubgridInputData.goes_input_filename(time)
-        df.write_parquet(tmp_path / filename)
-
-        data = SubgridInputData.from_parquet(subgrid, time, str(tmp_path))
+        data = SubgridInputData.from_storage(subgrid, time, _storage(tmp_path))
 
         assert "time" in data.cod.columns
         assert data.cod["time"][0] == time
@@ -215,26 +209,21 @@ class TestReadersDataFlow:
         """Test that InputData sorts by time, lat, lon."""
         subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
         base_time = datetime(2024, 8, 1, 1, 0)
+        slots = [base_time - timedelta(minutes=10 * (3 - i)) for i in range(3)]
 
-        # Create files with deliberately unsorted data
-        for i in range(3):
-            time = base_time - timedelta(minutes=10 * (3 - i))
-
-            # Unsorted coordinates
-            df = pl.DataFrame(
-                {
-                    "latitude": [-21.0, -22.0, -20.5],
-                    "longitude": [-48.0, -49.0, -48.5],
-                    "cod": [1.0, 2.0, 3.0],
-                }
+        for time in slots:
+            _write_frame(
+                tmp_path,
+                time,
+                pl.DataFrame(
+                    {
+                        "latitude": [-21.0, -22.0, -20.5],
+                        "longitude": [-48.0, -49.0, -48.5],
+                        "cod": [1.0, 2.0, 3.0],
+                    }
+                ),
             )
 
-            filename = SubgridInputData.goes_input_filename(time)
-            df.write_parquet(tmp_path / filename)
+        result = InputData(_storage(tmp_path)).for_subgrid(subgrid, slots)
 
-        reader = InputData(str(tmp_path))
-        result = reader.for_subgrid(subgrid, 3, base_time)
-
-        # Check that result is properly sorted
-        # Times should be in order
         assert all(result.time[:-1] <= result.time[1:])

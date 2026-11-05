@@ -13,7 +13,7 @@ from nwp_core.storage import Storage, open_storage
 
 from cod_nowcast_ons._config import NowcastConfig
 from cod_nowcast_ons._forecast import predict_subgrids
-from cod_nowcast_ons._frames import InputData, frame_key, frames_folder
+from cod_nowcast_ons._frames import InputData, frame_key
 from cod_nowcast_ons._guard import select_frames
 from cod_nowcast_ons._output import (
     shapefile_path,
@@ -84,10 +84,9 @@ def _nowcast_item(
     )
     naive = issue.replace(tzinfo=None)
     result = predict_subgrids(
-        InputData(frames_folder(config.input)),
+        InputData(storage),
         config.subgrids,
-        issue_time=naive,
-        num_frames=len(selection.slots),
+        slots=tuple(slot.replace(tzinfo=None) for slot in selection.slots),
         num_future_samples=config.num_future_samples,
     )
     write_inference_results(result, config.output.uri, naive)

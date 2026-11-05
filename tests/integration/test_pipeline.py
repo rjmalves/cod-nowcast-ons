@@ -1,8 +1,11 @@
-from datetime import datetime
+from __future__ import annotations
+
 from pathlib import Path
 
 import polars as pl
 import pytest
+from nwp_core.errors import ObjectNotFoundError
+from nwp_core.storage import StorageLocation, open_storage
 
 from cod_nowcast_ons._config import Subgrid
 from cod_nowcast_ons._forecast import predict_subgrids
@@ -11,6 +14,15 @@ from cod_nowcast_ons._output import (
     write_cloud_motion_plots,
     write_inference_results,
 )
+from tests.fixtures.goes_cod.criteria import nominal_slot
+from tests.fixtures.goes_cod.materialize import SOURCE, load_source
+
+_, _, _FRAMES = load_source(SOURCE)
+SLOTS = [nominal_slot(frame.name).replace(tzinfo=None) for frame in _FRAMES]
+
+
+def _reader(root: Path) -> InputData:
+    return InputData(open_storage(StorageLocation(uri=str(root))))
 
 
 @pytest.mark.integration
@@ -18,23 +30,11 @@ class TestFullPipeline:
     """Test the complete nowcasting pipeline from input to output."""
 
     def test_end_to_end_inference(
-        self, test_data_dir: Path, temp_output_dir: Path
+        self, layout_root: Path, temp_output_dir: Path
     ) -> None:
         """Test complete inference pipeline with test data."""
-        # Check if we have test data
-        test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
-        if len(test_files) < 5:
-            pytest.skip("Need at least 5 test files for full pipeline")
-
-        # Get base time from last file
-        last_file = sorted(test_files)[-1]
-        time_str = last_file.stem.split("_")[-1]
-        base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
-
-        # Run pipeline
-        reader = InputData(str(test_data_dir))
         result = predict_subgrids(
-            reader,
+            _reader(layout_root),
             [
                 Subgrid(
                     name="TEST",
@@ -42,8 +42,7 @@ class TestFullPipeline:
                     lon=(-50.0, -47.0),
                 )
             ],
-            issue_time=base_time,
-            num_frames=4,
+            slots=SLOTS[:4],
             num_future_samples=3,
         )
 
@@ -60,7 +59,7 @@ class TestFullPipeline:
         assert subgrid_result.motion_field.shape[0] == 2  # U, V
 
         # Write results
-        write_inference_results(result, str(temp_output_dir), base_time)
+        write_inference_results(result, str(temp_output_dir), SLOTS[4])
 
         # Verify output file exists
         output_file = temp_output_dir / "cod.parquet"
@@ -76,22 +75,11 @@ class TestFullPipeline:
         assert "valor" in df.columns
 
     def test_pipeline_with_multiple_subgrids(
-        self, test_data_dir: Path, temp_output_dir: Path
+        self, layout_root: Path, temp_output_dir: Path
     ) -> None:
         """Test pipeline with multiple geographic subgrids."""
-        test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
-        if len(test_files) < 5:
-            pytest.skip("Need test data")
-
-        # Setup
-        last_file = sorted(test_files)[-1]
-        time_str = last_file.stem.split("_")[-1]
-        base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
-
-        # Run with two subgrids
-        reader = InputData(str(test_data_dir))
         result = predict_subgrids(
-            reader,
+            _reader(layout_root),
             [
                 Subgrid(
                     name="REGION1",
@@ -104,8 +92,7 @@ class TestFullPipeline:
                     lon=(-48.5, -47.0),
                 ),
             ],
-            issue_time=base_time,
-            num_frames=4,
+            slots=SLOTS[:4],
             num_future_samples=2,
         )
 
@@ -114,7 +101,7 @@ class TestFullPipeline:
         assert "REGION2" in result.subgrid_results
 
         # Write and verify
-        write_inference_results(result, str(temp_output_dir), base_time)
+        write_inference_results(result, str(temp_output_dir), SLOTS[4])
         output_file = temp_output_dir / "cod.parquet"
         assert output_file.exists()
 
@@ -125,24 +112,13 @@ class TestFullPipeline:
     @pytest.mark.plotting
     def test_pipeline_with_plots(
         self,
-        test_data_dir: Path,
+        layout_root: Path,
         temp_output_dir: Path,
         test_shapefile_path: Path,
     ) -> None:
         """Test pipeline with plot generation enabled."""
-        test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
-        if len(test_files) < 5:
-            pytest.skip("Need test data")
-
-        # Setup
-        last_file = sorted(test_files)[-1]
-        time_str = last_file.stem.split("_")[-1]
-        base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
-
-        # Run inference
-        reader = InputData(str(test_data_dir))
         result = predict_subgrids(
-            reader,
+            _reader(layout_root),
             [
                 Subgrid(
                     name="TEST",
@@ -150,13 +126,12 @@ class TestFullPipeline:
                     lon=(-50.0, -47.0),
                 )
             ],
-            issue_time=base_time,
-            num_frames=4,
+            slots=SLOTS[:4],
             num_future_samples=2,
         )
 
         # Write results and plots, with the test shapefile
-        write_inference_results(result, str(temp_output_dir), base_time)
+        write_inference_results(result, str(temp_output_dir), SLOTS[4])
         write_cloud_motion_plots(
             result, str(temp_output_dir), str(test_shapefile_path)
         )
@@ -178,14 +153,11 @@ class TestFullPipeline:
 class TestPipelineErrorHandling:
     """Test error handling in the pipeline."""
 
-    def test_missing_input_files(self) -> None:
+    def test_missing_input_files(self, tmp_path: Path) -> None:
         """Test that missing input files are handled gracefully."""
-        reader = InputData("nonexistent_directory")
-
-        # Should raise error for missing files
-        with pytest.raises(Exception):
+        with pytest.raises(ObjectNotFoundError):
             predict_subgrids(
-                reader,
+                _reader(tmp_path),
                 [
                     Subgrid(
                         name="TEST",
@@ -193,28 +165,15 @@ class TestPipelineErrorHandling:
                         lon=(-50.0, -47.0),
                     )
                 ],
-                issue_time=datetime(2024, 8, 1, 1, 0),
-                num_frames=6,
+                slots=SLOTS[:4],
                 num_future_samples=3,
             )
 
-    def test_invalid_subgrid_bounds(self, test_data_dir: Path) -> None:
+    def test_invalid_subgrid_bounds(self, layout_root: Path) -> None:
         """Test with subgrid outside data bounds."""
-        test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
-        if not test_files:
-            pytest.skip("Need test data")
-
-        # Setup
-        last_file = sorted(test_files)[-1]
-        time_str = last_file.stem.split("_")[-1]
-        base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
-
-        reader = InputData(str(test_data_dir))
-
-        # Should handle empty data gracefully or raise error
-        with pytest.raises(Exception):
+        with pytest.raises(IndexError):
             predict_subgrids(
-                reader,
+                _reader(layout_root),
                 [
                     # Subgrid completely outside test data bounds
                     Subgrid(
@@ -223,8 +182,7 @@ class TestPipelineErrorHandling:
                         lon=(-10.0, -5.0),
                     )
                 ],
-                issue_time=base_time,
-                num_frames=4,
+                slots=SLOTS[:4],
                 num_future_samples=2,
             )
 
@@ -235,26 +193,16 @@ class TestPipelinePerformance:
     """Performance tests for the pipeline."""
 
     def test_pipeline_completes_in_reasonable_time(
-        self, test_data_dir: Path, temp_output_dir: Path
+        self, layout_root: Path, temp_output_dir: Path
     ) -> None:
         """Test that pipeline completes within acceptable time."""
         import time
 
-        test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
-        if len(test_files) < 5:
-            pytest.skip("Need test data")
-
-        # Setup
-        last_file = sorted(test_files)[-1]
-        time_str = last_file.stem.split("_")[-1]
-        base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
-
         # Time the pipeline
         start = time.time()
 
-        reader = InputData(str(test_data_dir))
         result = predict_subgrids(
-            reader,
+            _reader(layout_root),
             [
                 Subgrid(
                     name="TEST",
@@ -262,11 +210,10 @@ class TestPipelinePerformance:
                     lon=(-50.0, -47.0),
                 )
             ],
-            issue_time=base_time,
-            num_frames=4,
+            slots=SLOTS[:4],
             num_future_samples=6,
         )
-        write_inference_results(result, str(temp_output_dir), base_time)
+        write_inference_results(result, str(temp_output_dir), SLOTS[4])
 
         elapsed = time.time() - start
 

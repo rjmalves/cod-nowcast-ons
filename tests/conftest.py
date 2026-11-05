@@ -11,11 +11,7 @@ import shapefile
 import xarray as xr
 
 from cod_nowcast_ons._config import Subgrid
-from tests.fixtures.goes_cod.materialize import (
-    FRAMES_PREFIX,
-    SOURCE,
-    materialize,
-)
+from tests.fixtures.goes_cod.materialize import SOURCE, materialize
 
 _WGS84_PRJ = (
     'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",'
@@ -32,16 +28,16 @@ _POINTS: list[tuple[float, float]] = [
 
 
 @pytest.fixture
-def test_data_dir(tmp_path: Path) -> Path:
-    """Folder of the frames materialized from the committed text source.
+def layout_root(tmp_path: Path) -> Path:
+    """Gold layout root of the frames materialized from the committed source.
 
-    The frames are written under the gold layout, so the returned
-    ``goes_processed`` folder is the one that the frame reader reads.
+    The frames are written under ``goes_processed`` in the returned root, which
+    is the location that the frame reader opens.
     """
     root = tmp_path / "frames"
     root.mkdir()
     materialize(SOURCE, root)
-    return root / FRAMES_PREFIX
+    return root
 
 
 @pytest.fixture(scope="session")
