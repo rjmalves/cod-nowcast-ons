@@ -1,0 +1,231 @@
+{
+  "$defs": {
+    "Postprocessing": {
+      "additionalProperties": false,
+      "properties": {
+        "plots": {
+          "default": false,
+          "type": "boolean"
+        },
+        "shapefile": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Shapefile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "type": "object"
+    },
+    "Shapefile": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/StorageLocation"
+        }
+      },
+      "required": [
+        "key",
+        "location"
+      ],
+      "type": "object"
+    },
+    "StorageLocation": {
+      "additionalProperties": false,
+      "properties": {
+        "anonymous": {
+          "default": false,
+          "type": "boolean"
+        },
+        "endpoint_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provider_source": {
+          "default": false,
+          "type": "boolean"
+        },
+        "storage_class": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "type": "object"
+    },
+    "StorageSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "connect_timeout_s": {
+          "default": 10.0,
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "type": "number"
+        },
+        "max_attempts": {
+          "default": 5,
+          "maximum": 20,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_pool_connections": {
+          "default": 10,
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "read_timeout_s": {
+          "default": 60.0,
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
+    "Subgrid": {
+      "additionalProperties": false,
+      "properties": {
+        "lat": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "maximum": 90.0,
+              "minimum": -90.0,
+              "type": "number"
+            },
+            {
+              "maximum": 90.0,
+              "minimum": -90.0,
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "lon": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "maximum": 180.0,
+              "minimum": -180.0,
+              "type": "number"
+            },
+            {
+              "maximum": 180.0,
+              "minimum": -180.0,
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "lat",
+        "lon"
+      ],
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "base_datetime": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "input": {
+      "$ref": "#/$defs/StorageLocation"
+    },
+    "max_input_staleness": {
+      "default": "PT10M",
+      "format": "duration",
+      "type": "string"
+    },
+    "min_input_frames": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "num_future_samples": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "num_past_samples": {
+      "minimum": 2,
+      "type": "integer"
+    },
+    "output": {
+      "$ref": "#/$defs/StorageLocation"
+    },
+    "postprocessing": {
+      "$ref": "#/$defs/Postprocessing",
+      "default": {
+        "plots": false,
+        "shapefile": null
+      }
+    },
+    "storage": {
+      "$ref": "#/$defs/StorageSettings",
+      "default": {
+        "connect_timeout_s": 10.0,
+        "max_attempts": 5,
+        "max_pool_connections": 10,
+        "read_timeout_s": 60.0
+      }
+    },
+    "subgrids": {
+      "items": {
+        "$ref": "#/$defs/Subgrid"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "base_datetime",
+    "input",
+    "output",
+    "num_past_samples",
+    "num_future_samples",
+    "subgrids"
+  ],
+  "type": "object"
+}
