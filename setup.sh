@@ -177,14 +177,14 @@ if [[ $USE_SUDO -eq 1 ]]; then
 	chmod 755 "$SYMLINK_PATH"
 fi
 
+log "\n✓ Installation complete!"
+
 # Check if bin directory is in PATH
 case ":$PATH:" in
 	*":$BIN_DIR:"*)
-		log "\n✓ Installation complete!"
 		log "Run '$ENTRYPOINT_NAME --help' to get started."
 		;;
 	*)
-		log "\n✓ Installation complete!"
 		log "Note: $BIN_DIR is not in your PATH."
 		log "Add it by adding this line to your shell profile (~/.bashrc, ~/.zshrc, etc.):"
 		log "  export PATH=\"$BIN_DIR:\$PATH\""
