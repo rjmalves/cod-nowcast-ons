@@ -185,6 +185,15 @@ def test_invalid_guard_value_is_a_config_error(
             id="reversed-lat",
         ),
         pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lon=[-47.0, -50.0])
+                )
+            },
+            "subgrids.0",
+            id="reversed-lon",
+        ),
+        pytest.param(
             {"COD_NOWCAST_ONS_SUBGRIDS": "[]"}, "subgrids", id="no-subgrids"
         ),
         pytest.param(
