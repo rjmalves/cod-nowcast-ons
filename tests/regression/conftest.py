@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from cod_nowcast_ons._config import Config, PostprocessingConfig, SubgridConfig
-from cod_nowcast_ons._forecast import InferenceManager
+from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._forecast import predict_subgrids
 from cod_nowcast_ons._frames import InputData
 from cod_nowcast_ons._output import write_inference_results
 from tests.fixtures.goes_cod.criteria import L, P, nominal_slot
@@ -49,18 +49,14 @@ def run_regression(input_root: Path, out_dir: Path) -> Path:
         The path of the ``cod.parquet`` written under ``out_dir``.
     """
     name, lat, lon = SUBGRID
-    config = Config(
-        mode="inference",
-        input=str(input_root / FRAMES_PREFIX),
-        output=str(out_dir),
-        base_datetime=BASE_DATETIME,
-        num_past_samples=NUM_PAST,
+    result = predict_subgrids(
+        InputData(str(input_root / FRAMES_PREFIX)),
+        [SubgridConfig(name=name, lat=list(lat), lon=list(lon))],
+        issue_time=BASE_DATETIME,
+        num_frames=NUM_PAST,
         num_future_samples=NUM_FUTURE,
-        subgrids=[SubgridConfig(name=name, lat=list(lat), lon=list(lon))],
-        postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
     )
-    result = InferenceManager(config, InputData(config.input)).predict()
-    write_inference_results(config, result)
+    write_inference_results(result, str(out_dir), BASE_DATETIME)
     return out_dir / "cod.parquet"
 
 

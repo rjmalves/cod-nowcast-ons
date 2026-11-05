@@ -1,11 +1,12 @@
 import warnings
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import numpy as np
 import xarray as xr
 
-from cod_nowcast_ons._config import Config, SubgridConfig
+from cod_nowcast_ons._config import SubgridConfig
 from cod_nowcast_ons._frames import InputData
 
 warnings.simplefilter("ignore", SyntaxWarning)
@@ -85,24 +86,25 @@ class InferenceResult:
     subgrid_results: dict[str, SubgridResult]
 
 
-class InferenceManager:
-    def __init__(self, config: Config, reader: InputData):
-        self.config = config
-        self.reader = reader
+def predict_subgrids(
+    reader: InputData,
+    subgrids: Sequence[SubgridConfig],
+    *,
+    issue_time: datetime,
+    num_frames: int,
+    num_future_samples: int,
+) -> InferenceResult:
+    """Forecast every subgrid from the frames before ``issue_time``.
 
-    def _predict_for_subgrid(self, subgrid: SubgridConfig) -> SubgridResult:
-        subgrid_data = self.reader.for_subgrid(
-            subgrid, self.config.num_past_samples, self.config.base_datetime
-        )
+    ``issue_time`` is naive UTC. The frames read are
+    ``issue_time - 10 min * i`` for ``i = num_frames..1``.
+    """
+    results = {}
+    for subgrid in subgrids:
+        subgrid_data = reader.for_subgrid(subgrid, num_frames, issue_time)
         steps = CloudMotionForecast(subgrid_data)
-        cod = steps.forecast(self.config.num_future_samples)
-        return SubgridResult(
-            cod=cod,
-            motion_field=steps.motion_field,
+        cod = steps.forecast(num_future_samples)
+        results[subgrid.name] = SubgridResult(
+            cod=cod, motion_field=steps.motion_field
         )
-
-    def predict(self) -> InferenceResult:
-        results = {}
-        for subgrid in self.config.subgrids:
-            results[subgrid.name] = self._predict_for_subgrid(subgrid)
-        return InferenceResult(subgrid_results=results)
+    return InferenceResult(subgrid_results=results)

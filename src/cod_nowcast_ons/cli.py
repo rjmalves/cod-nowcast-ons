@@ -5,7 +5,7 @@ from traceback import print_exc
 
 from cod_nowcast_ons import __version__
 from cod_nowcast_ons._config import Config
-from cod_nowcast_ons._forecast import InferenceManager
+from cod_nowcast_ons._forecast import predict_subgrids
 from cod_nowcast_ons._frames import InputData
 from cod_nowcast_ons._output import (
     write_cloud_motion_plots,
@@ -50,12 +50,19 @@ def main() -> None:
 
         if mode == "inference":
             print("Starting inference mode...")
-            manager = InferenceManager(config, reader)
-            result = manager.predict()
+            result = predict_subgrids(
+                reader,
+                config.subgrids,
+                issue_time=config.base_datetime,
+                num_frames=config.num_past_samples,
+                num_future_samples=config.num_future_samples,
+            )
             print("Inference completed successfully!")
-            write_inference_results(config, result)
+            write_inference_results(result, config.output, config.base_datetime)
             if config.postprocessing.plots:
-                write_cloud_motion_plots(config, result)
+                write_cloud_motion_plots(
+                    result, config.output, config.postprocessing.shapefile_path
+                )
             print("Results written successfully!")
         else:
             print(f"Unknown mode: {mode}")

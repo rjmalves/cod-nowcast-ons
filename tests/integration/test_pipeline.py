@@ -4,8 +4,8 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from cod_nowcast_ons._config import Config, PostprocessingConfig, SubgridConfig
-from cod_nowcast_ons._forecast import InferenceManager
+from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._forecast import predict_subgrids
 from cod_nowcast_ons._frames import InputData
 from cod_nowcast_ons._output import (
     write_cloud_motion_plots,
@@ -31,30 +31,21 @@ class TestFullPipeline:
         time_str = last_file.stem.split("_")[-1]
         base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
 
-        # Create config
-        config = Config(
-            mode="inference",
-            input=str(test_data_dir),
-            output=str(temp_output_dir),
-            base_datetime=base_time,
-            num_past_samples=4,
-            num_future_samples=3,
-            subgrids=[
+        # Run pipeline
+        reader = InputData(str(test_data_dir))
+        result = predict_subgrids(
+            reader,
+            [
                 SubgridConfig(
                     name="TEST",
                     lat=[-23.0, -20.0],
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(
-                plots=False, shapefile_path=None
-            ),
+            issue_time=base_time,
+            num_frames=4,
+            num_future_samples=3,
         )
-
-        # Run pipeline
-        reader = InputData(config.input)
-        manager = InferenceManager(config, reader)
-        result = manager.predict()
 
         # Verify result structure
         assert result is not None
@@ -69,7 +60,7 @@ class TestFullPipeline:
         assert subgrid_result.motion_field.shape[0] == 2  # U, V
 
         # Write results
-        write_inference_results(config, result)
+        write_inference_results(result, str(temp_output_dir), base_time)
 
         # Verify output file exists
         output_file = temp_output_dir / "cod.parquet"
@@ -97,15 +88,11 @@ class TestFullPipeline:
         time_str = last_file.stem.split("_")[-1]
         base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
 
-        # Config with two subgrids
-        config = Config(
-            mode="inference",
-            input=str(test_data_dir),
-            output=str(temp_output_dir),
-            base_datetime=base_time,
-            num_past_samples=4,
-            num_future_samples=2,
-            subgrids=[
+        # Run with two subgrids
+        reader = InputData(str(test_data_dir))
+        result = predict_subgrids(
+            reader,
+            [
                 SubgridConfig(
                     name="REGION1",
                     lat=[-23.0, -21.5],
@@ -117,22 +104,17 @@ class TestFullPipeline:
                     lon=[-48.5, -47.0],
                 ),
             ],
-            postprocessing=PostprocessingConfig(
-                plots=False, shapefile_path=None
-            ),
+            issue_time=base_time,
+            num_frames=4,
+            num_future_samples=2,
         )
-
-        # Run
-        reader = InputData(config.input)
-        manager = InferenceManager(config, reader)
-        result = manager.predict()
 
         # Verify both subgrids processed
         assert "REGION1" in result.subgrid_results
         assert "REGION2" in result.subgrid_results
 
         # Write and verify
-        write_inference_results(config, result)
+        write_inference_results(result, str(temp_output_dir), base_time)
         output_file = temp_output_dir / "cod.parquet"
         assert output_file.exists()
 
@@ -157,34 +139,27 @@ class TestFullPipeline:
         time_str = last_file.stem.split("_")[-1]
         base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
 
-        # Config with plots enabled and test shapefile
-        config = Config(
-            mode="inference",
-            input=str(test_data_dir),
-            output=str(temp_output_dir),
-            base_datetime=base_time,
-            num_past_samples=4,
-            num_future_samples=2,
-            subgrids=[
+        # Run inference
+        reader = InputData(str(test_data_dir))
+        result = predict_subgrids(
+            reader,
+            [
                 SubgridConfig(
                     name="TEST",
                     lat=[-23.0, -20.0],
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(
-                plots=True, shapefile_path=str(test_shapefile_path)
-            ),
+            issue_time=base_time,
+            num_frames=4,
+            num_future_samples=2,
         )
 
-        # Run inference
-        reader = InputData(config.input)
-        manager = InferenceManager(config, reader)
-        result = manager.predict()
-
-        # Write results and plots
-        write_inference_results(config, result)
-        write_cloud_motion_plots(config, result)
+        # Write results and plots, with the test shapefile
+        write_inference_results(result, str(temp_output_dir), base_time)
+        write_cloud_motion_plots(
+            result, str(temp_output_dir), str(test_shapefile_path)
+        )
 
         # Verify plot directory created
         plots_dir = temp_output_dir / "plots"
@@ -203,37 +178,27 @@ class TestFullPipeline:
 class TestPipelineErrorHandling:
     """Test error handling in the pipeline."""
 
-    def test_missing_input_files(self, temp_output_dir: Path) -> None:
+    def test_missing_input_files(self) -> None:
         """Test that missing input files are handled gracefully."""
-        config = Config(
-            mode="inference",
-            input="nonexistent_directory",
-            output=str(temp_output_dir),
-            base_datetime=datetime(2024, 8, 1, 1, 0),
-            num_past_samples=6,
-            num_future_samples=3,
-            subgrids=[
-                SubgridConfig(
-                    name="TEST",
-                    lat=[-23.0, -20.0],
-                    lon=[-50.0, -47.0],
-                )
-            ],
-            postprocessing=PostprocessingConfig(
-                plots=False, shapefile_path=None
-            ),
-        )
-
-        reader = InputData(config.input)
-        manager = InferenceManager(config, reader)
+        reader = InputData("nonexistent_directory")
 
         # Should raise error for missing files
         with pytest.raises(Exception) as _:
-            manager.predict()
+            predict_subgrids(
+                reader,
+                [
+                    SubgridConfig(
+                        name="TEST",
+                        lat=[-23.0, -20.0],
+                        lon=[-50.0, -47.0],
+                    )
+                ],
+                issue_time=datetime(2024, 8, 1, 1, 0),
+                num_frames=6,
+                num_future_samples=3,
+            )
 
-    def test_invalid_subgrid_bounds(
-        self, test_data_dir: Path, temp_output_dir: Path
-    ) -> None:
+    def test_invalid_subgrid_bounds(self, test_data_dir: Path) -> None:
         """Test with subgrid outside data bounds."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
         if not test_files:
@@ -244,32 +209,24 @@ class TestPipelineErrorHandling:
         time_str = last_file.stem.split("_")[-1]
         base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
 
-        # Subgrid completely outside test data bounds
-        config = Config(
-            mode="inference",
-            input=str(test_data_dir),
-            output=str(temp_output_dir),
-            base_datetime=base_time,
-            num_past_samples=4,
-            num_future_samples=2,
-            subgrids=[
-                SubgridConfig(
-                    name="OUTSIDE",
-                    lat=[10.0, 20.0],  # Outside test data
-                    lon=[-10.0, -5.0],
-                )
-            ],
-            postprocessing=PostprocessingConfig(
-                plots=False, shapefile_path=None
-            ),
-        )
-
-        reader = InputData(config.input)
-        manager = InferenceManager(config, reader)
+        reader = InputData(str(test_data_dir))
 
         # Should handle empty data gracefully or raise error
         with pytest.raises(Exception) as _:
-            manager.predict()
+            predict_subgrids(
+                reader,
+                [
+                    # Subgrid completely outside test data bounds
+                    SubgridConfig(
+                        name="OUTSIDE",
+                        lat=[10.0, 20.0],  # Outside test data
+                        lon=[-10.0, -5.0],
+                    )
+                ],
+                issue_time=base_time,
+                num_frames=4,
+                num_future_samples=2,
+            )
 
 
 @pytest.mark.integration
@@ -292,32 +249,24 @@ class TestPipelinePerformance:
         time_str = last_file.stem.split("_")[-1]
         base_time = datetime.strptime(time_str, "%Y%m%d-%H%M")
 
-        config = Config(
-            mode="inference",
-            input=str(test_data_dir),
-            output=str(temp_output_dir),
-            base_datetime=base_time,
-            num_past_samples=4,
-            num_future_samples=6,
-            subgrids=[
+        # Time the pipeline
+        start = time.time()
+
+        reader = InputData(str(test_data_dir))
+        result = predict_subgrids(
+            reader,
+            [
                 SubgridConfig(
                     name="TEST",
                     lat=[-23.0, -20.0],
                     lon=[-50.0, -47.0],
                 )
             ],
-            postprocessing=PostprocessingConfig(
-                plots=False, shapefile_path=None
-            ),
+            issue_time=base_time,
+            num_frames=4,
+            num_future_samples=6,
         )
-
-        # Time the pipeline
-        start = time.time()
-
-        reader = InputData(config.input)
-        manager = InferenceManager(config, reader)
-        result = manager.predict()
-        write_inference_results(config, result)
+        write_inference_results(result, str(temp_output_dir), base_time)
 
         elapsed = time.time() - start
 
