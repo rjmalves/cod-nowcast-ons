@@ -222,6 +222,16 @@ def mock_s3_bucket() -> Generator[str, None, None]:
         mock.stop()
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register the switch that rewrites the regression golden."""
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help="rewrite tests/regression/golden/cod_regression.json and fail",
+    )
+
+
 # Markers for different test categories
 def pytest_configure(config: pytest.Config) -> None:
     """Configure custom pytest markers."""
