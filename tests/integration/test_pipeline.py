@@ -59,7 +59,11 @@ class TestFullPipeline:
         assert subgrid_result.motion_field.shape[0] == 2  # U, V
 
         # Write results
-        write_inference_results(result, str(temp_output_dir), SLOTS[4])
+        write_inference_results(
+            result,
+            open_storage(StorageLocation(uri=str(temp_output_dir))),
+            SLOTS[4],
+        )
 
         # Verify output file exists
         output_file = temp_output_dir / "cod.parquet"
@@ -101,7 +105,11 @@ class TestFullPipeline:
         assert "REGION2" in result.subgrid_results
 
         # Write and verify
-        write_inference_results(result, str(temp_output_dir), SLOTS[4])
+        write_inference_results(
+            result,
+            open_storage(StorageLocation(uri=str(temp_output_dir))),
+            SLOTS[4],
+        )
         output_file = temp_output_dir / "cod.parquet"
         assert output_file.exists()
 
@@ -131,7 +139,11 @@ class TestFullPipeline:
         )
 
         # Write results and plots, with the test shapefile
-        write_inference_results(result, str(temp_output_dir), SLOTS[4])
+        write_inference_results(
+            result,
+            open_storage(StorageLocation(uri=str(temp_output_dir))),
+            SLOTS[4],
+        )
         write_cloud_motion_plots(
             result, str(temp_output_dir), str(test_shapefile_path)
         )
@@ -213,7 +225,11 @@ class TestPipelinePerformance:
             slots=SLOTS[:4],
             num_future_samples=6,
         )
-        write_inference_results(result, str(temp_output_dir), SLOTS[4])
+        write_inference_results(
+            result,
+            open_storage(StorageLocation(uri=str(temp_output_dir))),
+            SLOTS[4],
+        )
 
         elapsed = time.time() - start
 

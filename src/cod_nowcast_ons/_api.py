@@ -38,6 +38,8 @@ def nowcast(
     guard finds too few frames.
 
     Raises:
+        LocationUnusableError: If a storage location is unusable, such as a
+            missing local output root (exit 2).
         RunNotReadyError: If the input frames are not ready (exit 4).
         RunFailedError: If the forecast or a writer fails (exit 3).
     """
@@ -48,10 +50,11 @@ def nowcast(
         run_id=run_id,
         started_at=started_at,
     )
-    storage = open_storage(config.input, config.storage)
+    inputs = open_storage(config.input, config.storage)
+    outputs = open_storage(config.output, config.storage)
     outcome = run_items(
         [config.base_datetime],
-        partial(_nowcast_item, config, storage),
+        partial(_nowcast_item, config, inputs, outputs),
         context=context,
         item_id=cycle_token,
     )
@@ -59,7 +62,7 @@ def nowcast(
 
 
 def _nowcast_item(
-    config: NowcastConfig, storage: Storage, base: datetime
+    config: NowcastConfig, inputs: Storage, outputs: Storage, base: datetime
 ) -> ItemReport:
     selection = select_frames(
         base,
@@ -70,7 +73,7 @@ def _nowcast_item(
             if config.min_input_frames is None
             else config.min_input_frames
         ),
-        present=lambda slot: storage.stat(frame_key(slot)) is not None,
+        present=lambda slot: inputs.stat(frame_key(slot)) is not None,
     )
     issue = selection.issue_time
     log_event(
@@ -84,12 +87,12 @@ def _nowcast_item(
     )
     naive = issue.replace(tzinfo=None)
     result = predict_subgrids(
-        InputData(storage),
+        InputData(inputs),
         config.subgrids,
         slots=tuple(slot.replace(tzinfo=None) for slot in selection.slots),
         num_future_samples=config.num_future_samples,
     )
-    write_inference_results(result, config.output.uri, naive)
+    write_inference_results(result, outputs, naive)
     if config.postprocessing.plots:
         write_cloud_motion_plots(
             result,
