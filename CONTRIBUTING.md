@@ -291,6 +291,11 @@ class CloudMotionForecast:
 - Atualize o README se adicionar funcionalidades visíveis ao usuário
 - Atualize ARCHITECTURE.md se modificar a estrutura do sistema
 - Atualize CHANGELOG.md para mudanças relevantes
+- Siga o DOC-DIRECTIVES.md distribuído com o nwp-core (`nwp_core/standards/DOC-DIRECTIVES.md`), o padrão de documentação e de release do programa. Este comando imprime a revisão instalada:
+
+  ```bash
+  uv run --no-sync python -c "from importlib.resources import files; print(files('nwp_core').joinpath('standards/DOC-DIRECTIVES.md').read_text(encoding='utf-8'))"
+  ```
 
 ---
 
