@@ -88,3 +88,20 @@ A janela passa quando atende aos três critérios.
   falha no critério 3, e a triagem segue para o próximo candidato.
 - Se nenhum candidato passar, o trabalho para.
 - Nenhum modelo roda sobre candidato algum antes da captura do golden.
+
+## Triagem
+
+A triagem foi feita em 2026-11-04. Dos arquivos fornecidos pelo operador, 432
+têm nome na chave do produto, `GOES_COD_BR_YYYYMMDD-HHMM.parquet`, e só eles
+foram lidos. Nenhum modelo foi executado. Os candidatos foram triados em ordem
+crescente de horário inicial até o primeiro que passa, e o primeiro candidato
+que passa vira a fixture.
+
+Saída de `python -m tests.fixtures.goes_cod.cut screen SRC_DIR`, copiada sem
+alteração:
+
+| start | contiguous | finite counts | shifts | translation | passed |
+| --- | --- | --- | --- | --- | --- |
+| 2024-02-07T00:00Z | yes | 5776, 5776, 5776 | (0,2) 0.876, (0,2) 0.850, (0,2) 0.887, (0,2) 0.857 | yes | yes |
+not screened: 431
+first passing: 2024-02-07T00:00Z
