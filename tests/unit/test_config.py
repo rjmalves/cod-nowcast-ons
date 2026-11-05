@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -201,12 +202,62 @@ def test_invalid_guard_value_is_a_config_error(
             "max_input_staleness",
             id="calendar-unit-staleness",
         ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lat=[-math.inf, -20.0])
+                )
+            },
+            "subgrids.0.lat.0",
+            id="lat-infinite",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lat=[-91.0, -20.0])
+                )
+            },
+            "subgrids.0.lat.0",
+            id="lat-below-range",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lon=[-50.0, 181.0])
+                )
+            },
+            "subgrids.0.lon.1",
+            id="lon-above-range",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lon=[math.nan, -47.0])
+                )
+            },
+            "subgrids.0.lon.0",
+            id="lon-nan",
+        ),
     ],
 )
 def test_invalid_value_is_a_config_error(
     tmp_path: Path, env: dict[str, str], loc: str
 ) -> None:
     _assert_rejected(tmp_path, env, loc)
+
+
+def test_subgrid_accepts_the_coordinate_limits(tmp_path: Path) -> None:
+    cfg = _load(
+        tmp_path,
+        {
+            "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                _subgrid(lat=[-90.0, 90.0], lon=[-180.0, 180.0])
+            )
+        },
+    )
+
+    assert cfg.subgrids[0].lat == (-90.0, 90.0)
+    assert cfg.subgrids[0].lon == (-180.0, 180.0)
 
 
 def test_operational_fields_select_no_content(tmp_path: Path) -> None:

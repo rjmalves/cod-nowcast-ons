@@ -70,6 +70,10 @@ def _staleness(value: timedelta) -> timedelta:
     return value
 
 
+_Latitude = Annotated[float, Field(ge=-90.0, le=90.0, allow_inf_nan=False)]
+_Longitude = Annotated[float, Field(ge=-180.0, le=180.0, allow_inf_nan=False)]
+
+
 class Subgrid(BaseModel):
     model_config = _NESTED
 
@@ -79,12 +83,18 @@ class Subgrid(BaseModel):
         Field(description="Subgrid name, one component of the output keys."),
     ]
     lat: Annotated[
-        tuple[float, float],
-        Field(description="South and north bounds in degrees, south first."),
+        tuple[_Latitude, _Latitude],
+        Field(
+            description="South and north bounds in degrees within [-90, 90],"
+            " south first."
+        ),
     ]
     lon: Annotated[
-        tuple[float, float],
-        Field(description="West and east bounds in degrees, west first."),
+        tuple[_Longitude, _Longitude],
+        Field(
+            description="West and east bounds in degrees within [-180, 180],"
+            " west first."
+        ),
     ]
 
     @model_validator(mode="after")
