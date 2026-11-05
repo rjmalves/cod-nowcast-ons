@@ -220,6 +220,20 @@ cod-nowcast-ons --config config.jsonc
 
 ---
 
+## Códigos de saída
+
+O comando `cod-nowcast-ons nowcast` termina com um dos códigos abaixo. Os significados seguem o contrato de códigos de saída do nwp-core (`nwp_core.errors`).
+
+| Código | Significado                                    | Quando o cod-nowcast-ons retorna                                                                                                                                                                 |
+| ------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0      | Sucesso                                        | A previsão terminou e os artefatos foram gravados. A saída padrão traz só o resumo `nwp.run-summary/1`.                                                                                          |
+| 1      | Erro interno                                   | Uma exceção inesperada escapou da API ou da CLI. A saída padrão fica vazia e a saída de erro traz um evento `internal.error`.                                                                    |
+| 2      | Erro de configuração ou erro fatal da execução | A configuração é inválida, falta o subcomando ou um local de armazenamento não pode ser usado, como uma pasta de saída local que não existe. Tentar de novo sem corrigir o problema não resolve. |
+| 3      | Itens com falha                                | A previsão ou a gravação de um artefato falhou, por exemplo, por causa de um quadro de entrada ilegível. Uma nova tentativa pode resolver.                                                       |
+| 4      | Entrada não pronta                             | Os quadros GOES estão atrasados ou em número insuficiente para o `base_datetime`. Tente de novo quando os quadros chegarem.                                                                      |
+
+---
+
 ## 📁 Dados de Entrada
 
 ### Formato dos Arquivos
