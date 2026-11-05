@@ -10,7 +10,7 @@ import pytest
 import shapefile
 import xarray as xr
 
-from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._config import Subgrid
 from tests.fixtures.goes_cod.materialize import (
     FRAMES_PREFIX,
     SOURCE,
@@ -74,12 +74,12 @@ def temp_output_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def sample_subgrid_config() -> SubgridConfig:
+def sample_subgrid_config() -> Subgrid:
     """Sample subgrid configuration for testing."""
-    return SubgridConfig(
+    return Subgrid(
         name="test_region",
-        lat=[-23.0, -20.0],
-        lon=[-50.0, -47.0],
+        lat=(-23.0, -20.0),
+        lon=(-50.0, -47.0),
     )
 
 

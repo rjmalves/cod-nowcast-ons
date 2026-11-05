@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import xarray as xr
 
-from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._config import Subgrid
 from cod_nowcast_ons._frames import InputData
 
 warnings.simplefilter("ignore", SyntaxWarning)
@@ -88,7 +88,7 @@ class InferenceResult:
 
 def predict_subgrids(
     reader: InputData,
-    subgrids: Sequence[SubgridConfig],
+    subgrids: Sequence[Subgrid],
     *,
     issue_time: datetime,
     num_frames: int,

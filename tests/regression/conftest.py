@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._config import Subgrid
 from cod_nowcast_ons._forecast import predict_subgrids
 from cod_nowcast_ons._frames import InputData
 from cod_nowcast_ons._output import write_inference_results
@@ -51,7 +51,7 @@ def run_regression(input_root: Path, out_dir: Path) -> Path:
     name, lat, lon = SUBGRID
     result = predict_subgrids(
         InputData(str(input_root / FRAMES_PREFIX)),
-        [SubgridConfig(name=name, lat=list(lat), lon=list(lon))],
+        [Subgrid(name=name, lat=lat, lon=lon)],
         issue_time=BASE_DATETIME,
         num_frames=NUM_PAST,
         num_future_samples=NUM_FUTURE,

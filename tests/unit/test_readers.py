@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 import xarray as xr
 
-from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._config import Subgrid
 from cod_nowcast_ons._frames import InputData, SubgridInputData
 
 
@@ -25,7 +25,7 @@ class TestSubgridInputData:
 
     @pytest.mark.integration
     def test_from_parquet_local(
-        self, test_data_dir: Path, sample_subgrid_config: SubgridConfig
+        self, test_data_dir: Path, sample_subgrid_config: Subgrid
     ) -> None:
         """Test loading data from local parquet file."""
         # Use test fixture data
@@ -66,7 +66,7 @@ class TestSubgridInputData:
                 expected_path.unlink()
 
     def test_from_parquet_filters_by_subgrid(
-        self, tmp_path: Path, sample_subgrid_config: SubgridConfig
+        self, tmp_path: Path, sample_subgrid_config: Subgrid
     ) -> None:
         """Test that data is filtered by subgrid bounds."""
         # Create test parquet with data outside and inside bounds
@@ -114,9 +114,7 @@ class TestInputData:
     ) -> None:
         """Test that for_subgrid returns xarray DataArray."""
         # Create test parquet files
-        subgrid = SubgridConfig(
-            name="test", lat=[-23.0, -20.0], lon=[-50.0, -47.0]
-        )
+        subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
         base_time = datetime(2024, 8, 1, 1, 0)
 
         # Create 6 past time steps
@@ -153,7 +151,7 @@ class TestInputData:
 
     @pytest.mark.integration
     def test_for_subgrid_with_test_data(
-        self, test_data_dir: Path, sample_subgrid_config: SubgridConfig
+        self, test_data_dir: Path, sample_subgrid_config: Subgrid
     ) -> None:
         """Test for_subgrid with actual test fixture data."""
         test_files = list(test_data_dir.glob("GOES_COD_BR_*.parquet"))
@@ -179,9 +177,7 @@ class TestInputData:
 
     def test_for_subgrid_missing_file(self, tmp_path: Path) -> None:
         """Test that missing file raises appropriate error."""
-        subgrid = SubgridConfig(
-            name="test", lat=[-23.0, -20.0], lon=[-50.0, -47.0]
-        )
+        subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
         reader = InputData(str(tmp_path))
         base_time = datetime(2024, 8, 1, 1, 0)
 
@@ -195,9 +191,7 @@ class TestReadersDataFlow:
 
     def test_subgrid_data_has_time_column(self, tmp_path: Path) -> None:
         """Test that SubgridInputData adds time column."""
-        subgrid = SubgridConfig(
-            name="test", lat=[-23.0, -20.0], lon=[-50.0, -47.0]
-        )
+        subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
         time = datetime(2024, 8, 1, 0, 0)
 
         # Create minimal test file
@@ -219,9 +213,7 @@ class TestReadersDataFlow:
 
     def test_input_data_sorts_correctly(self, tmp_path: Path) -> None:
         """Test that InputData sorts by time, lat, lon."""
-        subgrid = SubgridConfig(
-            name="test", lat=[-23.0, -20.0], lon=[-50.0, -47.0]
-        )
+        subgrid = Subgrid(name="test", lat=(-23.0, -20.0), lon=(-50.0, -47.0))
         base_time = datetime(2024, 8, 1, 1, 0)
 
         # Create files with deliberately unsorted data

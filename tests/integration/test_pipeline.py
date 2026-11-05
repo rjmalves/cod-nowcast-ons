@@ -4,7 +4,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._config import Subgrid
 from cod_nowcast_ons._forecast import predict_subgrids
 from cod_nowcast_ons._frames import InputData
 from cod_nowcast_ons._output import (
@@ -36,10 +36,10 @@ class TestFullPipeline:
         result = predict_subgrids(
             reader,
             [
-                SubgridConfig(
+                Subgrid(
                     name="TEST",
-                    lat=[-23.0, -20.0],
-                    lon=[-50.0, -47.0],
+                    lat=(-23.0, -20.0),
+                    lon=(-50.0, -47.0),
                 )
             ],
             issue_time=base_time,
@@ -93,15 +93,15 @@ class TestFullPipeline:
         result = predict_subgrids(
             reader,
             [
-                SubgridConfig(
+                Subgrid(
                     name="REGION1",
-                    lat=[-23.0, -21.5],
-                    lon=[-50.0, -48.5],
+                    lat=(-23.0, -21.5),
+                    lon=(-50.0, -48.5),
                 ),
-                SubgridConfig(
+                Subgrid(
                     name="REGION2",
-                    lat=[-21.5, -20.0],
-                    lon=[-48.5, -47.0],
+                    lat=(-21.5, -20.0),
+                    lon=(-48.5, -47.0),
                 ),
             ],
             issue_time=base_time,
@@ -144,10 +144,10 @@ class TestFullPipeline:
         result = predict_subgrids(
             reader,
             [
-                SubgridConfig(
+                Subgrid(
                     name="TEST",
-                    lat=[-23.0, -20.0],
-                    lon=[-50.0, -47.0],
+                    lat=(-23.0, -20.0),
+                    lon=(-50.0, -47.0),
                 )
             ],
             issue_time=base_time,
@@ -187,10 +187,10 @@ class TestPipelineErrorHandling:
             predict_subgrids(
                 reader,
                 [
-                    SubgridConfig(
+                    Subgrid(
                         name="TEST",
-                        lat=[-23.0, -20.0],
-                        lon=[-50.0, -47.0],
+                        lat=(-23.0, -20.0),
+                        lon=(-50.0, -47.0),
                     )
                 ],
                 issue_time=datetime(2024, 8, 1, 1, 0),
@@ -217,10 +217,10 @@ class TestPipelineErrorHandling:
                 reader,
                 [
                     # Subgrid completely outside test data bounds
-                    SubgridConfig(
+                    Subgrid(
                         name="OUTSIDE",
-                        lat=[10.0, 20.0],  # Outside test data
-                        lon=[-10.0, -5.0],
+                        lat=(10.0, 20.0),  # Outside test data
+                        lon=(-10.0, -5.0),
                     )
                 ],
                 issue_time=base_time,
@@ -256,10 +256,10 @@ class TestPipelinePerformance:
         result = predict_subgrids(
             reader,
             [
-                SubgridConfig(
+                Subgrid(
                     name="TEST",
-                    lat=[-23.0, -20.0],
-                    lon=[-50.0, -47.0],
+                    lat=(-23.0, -20.0),
+                    lon=(-50.0, -47.0),
                 )
             ],
             issue_time=base_time,

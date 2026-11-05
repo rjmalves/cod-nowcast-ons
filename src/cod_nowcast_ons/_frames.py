@@ -1,18 +1,27 @@
+import posixpath
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Final
 
 import polars as pl
 import xarray as xr
+from nwp_core.storage import StorageLocation
 
-from cod_nowcast_ons._config import SubgridConfig
+from cod_nowcast_ons._config import Subgrid
 from cod_nowcast_ons._storage import StorageFactory
+
+FRAMES_PREFIX: Final = "goes_processed"
+
+
+def frames_folder(location: StorageLocation) -> str:
+    return posixpath.join(location.uri, FRAMES_PREFIX)
 
 
 @dataclass
 class SubgridInputData:
     name: str
-    latitude_range: list[float]
-    longitude_range: list[float]
+    latitude_range: tuple[float, float]
+    longitude_range: tuple[float, float]
     time: datetime
     cod: pl.DataFrame
 
@@ -22,7 +31,7 @@ class SubgridInputData:
 
     @classmethod
     def from_parquet(
-        cls, config: SubgridConfig, time: datetime, directory: str
+        cls, config: Subgrid, time: datetime, directory: str
     ) -> "SubgridInputData":
         storage = StorageFactory.get_storage(directory)
 
@@ -64,7 +73,7 @@ class InputData:
 
     def for_subgrid(
         self,
-        subgrid: SubgridConfig,
+        subgrid: Subgrid,
         num_past_samples: int,
         base_datetime: datetime,
     ) -> xr.DataArray:

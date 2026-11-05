@@ -1,10 +1,18 @@
+import posixpath
 from datetime import datetime
 
 import pandas as pd
 
+from cod_nowcast_ons._config import Shapefile
 from cod_nowcast_ons._forecast import InferenceResult
 from cod_nowcast_ons._plots import generate_cod_forecast_gif
 from cod_nowcast_ons._storage import StorageFactory
+
+
+def shapefile_path(shapefile: Shapefile | None) -> str | None:
+    if shapefile is None:
+        return None
+    return posixpath.join(shapefile.location.uri, shapefile.key)
 
 
 def write_inference_results(

@@ -1,0 +1,19 @@
+# Nowcast over the committed fixture frames for the image smoke run in CI.
+# Plots stay off: they download map data, and the run has no network.
+base_datetime = "2024-08-01T00:50:00Z"
+num_past_samples = 4
+num_future_samples = 3
+
+[input]
+uri = "/fixtures"
+
+[output]
+uri = "/tmp/nowcast"
+
+[[subgrids]]
+name = "FIXTURE"
+lat = [-23.0, -20.0]
+lon = [-50.0, -47.0]
+
+[postprocessing]
+plots = false
