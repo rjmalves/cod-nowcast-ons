@@ -425,7 +425,7 @@ dependencies = [
     { name = "xarray" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "boto3-stubs" },
     { name = "moto", extra = ["s3"] },
@@ -442,32 +442,35 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.35.0" },
-    { name = "boto3-stubs", marker = "extra == 'dev'", specifier = ">=1.41.3" },
     { name = "cartopy", specifier = ">=0.25.0" },
     { name = "matplotlib", specifier = ">=3.10.3" },
-    { name = "moto", extras = ["s3"], marker = "extra == 'dev'", specifier = ">=5.1.17" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.18.2" },
     { name = "numpy", specifier = ">=2.3.2" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
-    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.3.2.250926" },
     { name = "plotly", specifier = ">=6.2.0" },
     { name = "polars", specifier = ">=1.31.0" },
     { name = "pyarrow", specifier = ">=21.0.0" },
     { name = "pyjson5", specifier = ">=2.0.0" },
-    { name = "pyshp", marker = "extra == 'dev'", specifier = ">=3.0.2" },
     { name = "pysteps", specifier = ">=1.18.1" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.1" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.0.0" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.8.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "requests", specifier = ">=2.32.4" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.6" },
     { name = "s3fs", specifier = ">=2024.10.0" },
-    { name = "scipy", marker = "extra == 'dev'", specifier = ">=1.16.3" },
     { name = "statsmodels", specifier = ">=0.14.5" },
     { name = "xarray", specifier = ">=2025.7.1" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "boto3-stubs", specifier = ">=1.41.3" },
+    { name = "moto", extras = ["s3"], specifier = ">=5.1.17" },
+    { name = "mypy", specifier = ">=1.18.2" },
+    { name = "pandas-stubs", specifier = ">=2.3.2.250926" },
+    { name = "pyshp", specifier = ">=3.0.2" },
+    { name = "pytest", specifier = ">=9.0.1" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
+    { name = "ruff", specifier = ">=0.14.6" },
+    { name = "scipy", specifier = ">=1.16.3" },
+]
 
 [[package]]
 name = "colorama"
