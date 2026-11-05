@@ -39,6 +39,7 @@ dev = [
     "ruff>=0.14.6",
     "pyshp>=3.0.2",
     "nwp-core[skill]>=0.5.0",
+    "griffe>=2.4.1",
 ]
 
 [project.scripts]
