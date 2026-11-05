@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "cod-nowcast-ons"
 description = "Cloud Optical Depth forecasts using GOES satellite images and a thin wrapper around the pySTEPS module."
 readme = "README.md"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.11"
 dependencies = [
     "cartopy>=0.25.0",
