@@ -10,6 +10,21 @@ resolution-markers = [
     "(python_full_version < '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 
+[manifest]
+build-constraints = [
+    { name = "cython", specifier = "==3.3.1" },
+    { name = "editables", specifier = "==0.6" },
+    { name = "hatchling", specifier = "==1.33.0" },
+    { name = "numpy", specifier = "==2.3.5" },
+    { name = "packaging", specifier = "==26.3" },
+    { name = "pathspec", specifier = "==1.1.1" },
+    { name = "pluggy", specifier = "==1.7.0" },
+    { name = "setuptools", specifier = "==84.2.1" },
+    { name = "tomlkit", specifier = "==0.15.2" },
+    { name = "trove-classifiers", specifier = "==2026.9.21.13" },
+    { name = "wheel", specifier = "==0.48.0" },
+]
+
 [[package]]
 name = "aiobotocore"
 version = "2.25.2"

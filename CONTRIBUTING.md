@@ -96,6 +96,8 @@ make lint typecheck test
 
 Faça o commit do `uv.lock` em um commit `chore:`. O `rev` do nwp-core é um SHA de commit e permanece como está. Se o teste golden falhar depois da atualização, não o regenere no mesmo commit: um novo baseline é uma mudança revisada, com entrada no `CHANGELOG.md`.
 
+O `build-constraint-dependencies` do `pyproject.toml` fixa, com `==`, todo pacote instalado em um ambiente de build: o fecho do hatchling, do editables e dos requisitos de build do pysteps e do jsmin, que publicam apenas sdists. Ao atualizar o lock, mantenha o `numpy` do `build.in` igual ao `numpy` do `uv.lock`, para que as extensões do pysteps sejam compiladas contra o numpy que usam em execução. A lista inteira é atualizada resolvendo o `build.in` (`hatchling==1.33.0`, `editables~=0.3`, `setuptools>=40.8.0`, `wheel`, `cython>=0.29.2` e o `numpy` do lock, um por linha) com `uvx uv@0.9.22 pip compile --no-header --no-annotate --python-version 3.12 -o build-312.txt build.in`, que usa o uv 0.9.22, a versão fixada no CI. Repita o comando com `--python-version 3.11`, confirme com `cmp` que as duas saídas são idênticas e copie as linhas de `build-312.txt` para o `pyproject.toml`, na ordem do arquivo. Faça isso em um diretório fora do repositório.
+
 #### Verificando um PR do Dependabot (actions ou imagem)
 
 O CI desses PRs falha no `uv sync`, porque as execuções iniciadas pelo Dependabot não recebem secrets. Um mantenedor faz checkout do branch do PR, cria um commit vazio e envia para o mesmo branch:
