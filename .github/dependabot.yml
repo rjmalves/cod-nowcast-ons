@@ -6,12 +6,9 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
-  - package-ecosystem: uv
-    directory: /
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
+  # No uv entry while nwp-core comes from its private git source: Dependabot
+  # gets no token, so it cannot resolve uv.lock. Refresh uv.lock by hand, as
+  # CONTRIBUTING.md describes.
   - package-ecosystem: docker
     directory: /
     schedule:

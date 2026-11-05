@@ -82,6 +82,33 @@ uv run ruff check .
 uv run mypy
 ```
 
+### Atualizando dependências
+
+#### Atualizando o `uv.lock` manualmente
+
+Enquanto o nwp-core vem de um repositório git privado, o Dependabot não recebe token de leitura e não consegue resolver o `uv.lock`. Por isso não há entrada `uv` em `.github/dependabot.yml` e o lock é atualizado à mão. A atualização usa o uv 0.9.22, a versão fixada no CI, para que o lock seja escrito pelo mesmo uv que o verifica:
+
+```bash
+uvx uv@0.9.22 lock --upgrade
+uv sync --locked
+make lint typecheck test
+```
+
+Faça o commit do `uv.lock` em um commit `chore:`. O `rev` do nwp-core é um SHA de commit e permanece como está. Se o teste golden falhar depois da atualização, não o regenere no mesmo commit: um novo baseline é uma mudança revisada, com entrada no `CHANGELOG.md`.
+
+#### Verificando um PR do Dependabot (actions ou imagem)
+
+O CI desses PRs falha no `uv sync`, porque as execuções iniciadas pelo Dependabot não recebem secrets. Um mantenedor faz checkout do branch do PR, cria um commit vazio e envia para o mesmo branch:
+
+```bash
+git commit --allow-empty -m "ci: run the checks with the repository secrets"
+git push
+```
+
+Essa execução tem o mantenedor como ator e recebe o token de leitura (`NWP_CORE_READ_TOKEN`) e a lista de bloqueio do gate (`NWP_GATE_DENYLIST`). Faça o merge somente com ela verde.
+
+Nenhum secret é criado para o Dependabot, nem o token de leitura nem a lista de bloqueio do gate.
+
 ---
 
 ## 📐 Padrões de Código
