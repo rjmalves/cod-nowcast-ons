@@ -60,7 +60,7 @@ target-version = "py312"
 known-first-party = ["app"]
 
 [tool.uv]
-required-version = "==0.9.22"
+required-version = ">=0.9.22"
 
 [tool.mypy]
 strict = true

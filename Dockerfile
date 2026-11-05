@@ -3,6 +3,8 @@
 FROM ghcr.io/astral-sh/uv:0.9.22@sha256:2320e6c239737dc73cccce393a8bb89eba2383d17018ee91a59773df802c20e6 AS uv
 
 FROM python:3.12-slim-trixie@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159 AS builder
+# Local edit point value: pysteps 1.18.1 ships only an sdist and compiles C with OpenMP,
+# and gcc alone lacks libc6-dev under --no-install-recommends.
 ARG BUILD_APT_PACKAGES="gcc libc6-dev"
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git $BUILD_APT_PACKAGES \
@@ -37,6 +39,7 @@ RUN --mount=type=secret,id=nwp_core_token,required=false \
     uv sync --locked --no-dev --no-editable
 
 FROM python:3.12-slim-trixie@sha256:aa943ce411423c7582288f18707ff66eddcbaeb510502d747a72aeb34f30d159 AS runtime
+# Local edit point value: the compiled pysteps extensions link libgomp.so.1.
 ARG RUNTIME_APT_PACKAGES="libgomp1"
 RUN if [ -n "$RUNTIME_APT_PACKAGES" ]; then \
         apt-get update \
