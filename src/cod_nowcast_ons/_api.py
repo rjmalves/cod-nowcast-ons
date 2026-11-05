@@ -4,7 +4,7 @@ import importlib.metadata
 import logging
 from datetime import datetime
 from functools import partial
-from typing import Final
+from typing import Any, Final
 
 from nwp_core.layout import cycle_token
 from nwp_core.logging import log_event
@@ -16,10 +16,10 @@ from cod_nowcast_ons._forecast import predict_subgrids
 from cod_nowcast_ons._frames import InputData, frame_key
 from cod_nowcast_ons._guard import select_frames
 from cod_nowcast_ons._output import (
-    shapefile_path,
     write_cloud_motion_plots,
     write_inference_results,
 )
+from cod_nowcast_ons._plots import read_shapes
 
 TOOL: Final = "cod-nowcast-ons"
 
@@ -52,17 +52,34 @@ def nowcast(
     )
     inputs = open_storage(config.input, config.storage)
     outputs = open_storage(config.output, config.storage)
+    shapefile = config.postprocessing.shapefile
+    shapes = (
+        open_storage(shapefile.location, config.storage)
+        if config.postprocessing.plots and shapefile is not None
+        else None
+    )
     outcome = run_items(
         [config.base_datetime],
-        partial(_nowcast_item, config, inputs, outputs),
+        partial(_nowcast_item, config, inputs, outputs, shapes),
         context=context,
         item_id=cycle_token,
     )
     return outcome.raise_for_status()
 
 
+def _shapes(config: NowcastConfig, storage: Storage | None) -> list[Any]:
+    shapefile = config.postprocessing.shapefile
+    if storage is None or shapefile is None:
+        return []
+    return read_shapes(storage, shapefile.key)
+
+
 def _nowcast_item(
-    config: NowcastConfig, inputs: Storage, outputs: Storage, base: datetime
+    config: NowcastConfig,
+    inputs: Storage,
+    outputs: Storage,
+    shapes: Storage | None,
+    base: datetime,
 ) -> ItemReport:
     selection = select_frames(
         base,
@@ -94,9 +111,5 @@ def _nowcast_item(
     )
     write_inference_results(result, outputs, naive)
     if config.postprocessing.plots:
-        write_cloud_motion_plots(
-            result,
-            config.output.uri,
-            shapefile_path(config.postprocessing.shapefile),
-        )
+        write_cloud_motion_plots(result, outputs, _shapes(config, shapes))
     return ItemReport.succeeded("stale_input" if issue < base else None)

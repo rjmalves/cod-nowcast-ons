@@ -1,19 +1,23 @@
 from __future__ import annotations
 
+import shutil
+import socket
+from datetime import UTC
 from pathlib import Path
+from typing import NoReturn
 
 import polars as pl
 import pytest
-from nwp_core.errors import ObjectNotFoundError
+from nwp_core.errors import ObjectNotFoundError, RunFailedError
+from nwp_core.run import ItemStatus
 from nwp_core.storage import StorageLocation, open_storage
+from PIL import Image
 
-from cod_nowcast_ons._config import Subgrid
+from cod_nowcast_ons import NowcastConfig, nowcast
+from cod_nowcast_ons._config import Postprocessing, Shapefile, Subgrid
 from cod_nowcast_ons._forecast import predict_subgrids
 from cod_nowcast_ons._frames import InputData
-from cod_nowcast_ons._output import (
-    write_cloud_motion_plots,
-    write_inference_results,
-)
+from cod_nowcast_ons._output import write_inference_results
 from tests.fixtures.goes_cod.criteria import nominal_slot
 from tests.fixtures.goes_cod.materialize import SOURCE, load_source
 
@@ -21,8 +25,43 @@ _, _, _FRAMES = load_source(SOURCE)
 SLOTS = [nominal_slot(frame.name).replace(tzinfo=None) for frame in _FRAMES]
 
 
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
 def _reader(root: Path) -> InputData:
     return InputData(open_storage(StorageLocation(uri=str(root))))
+
+
+def _plot_config(
+    layout_root: Path, output: Path, shapefile: Shapefile | None
+) -> NowcastConfig:
+    return NowcastConfig(
+        base_datetime=SLOTS[4].replace(tzinfo=UTC),
+        input=StorageLocation(uri=str(layout_root)),
+        output=StorageLocation(uri=str(output)),
+        num_past_samples=4,
+        num_future_samples=2,
+        subgrids=(
+            Subgrid(name="TEST", lat=(-23.0, -20.0), lon=(-50.0, -47.0)),
+        ),
+        postprocessing=Postprocessing(plots=True, shapefile=shapefile),
+    )
+
+
+@pytest.fixture
+def offline_maps(
+    monkeypatch: pytest.MonkeyPatch, generated_shapefile: Path
+) -> None:
+    def refuse(*args: object, **kwargs: object) -> NoReturn:
+        msg = "network access is disabled"
+        raise OSError(msg)
+
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    monkeypatch.setattr(
+        "cartopy.io.shapereader.natural_earth",
+        lambda **_: str(generated_shapefile),
+    )
+    monkeypatch.setattr("cartopy.feature._NATURAL_EARTH_GEOM_CACHE", {})
 
 
 @pytest.mark.integration
@@ -118,47 +157,71 @@ class TestFullPipeline:
         assert len(df) > 0
 
     @pytest.mark.plotting
-    def test_pipeline_with_plots(
+    @pytest.mark.usefixtures("offline_maps")
+    @pytest.mark.parametrize(
+        "with_shapefile",
+        [True, False],
+        ids=["with-shapefile", "coastlines-only"],
+    )
+    def test_nowcast_writes_plots_offline(
         self,
         layout_root: Path,
         temp_output_dir: Path,
-        test_shapefile_path: Path,
+        generated_shapefile: Path,
+        with_shapefile: bool,
     ) -> None:
-        """Test pipeline with plot generation enabled."""
-        result = predict_subgrids(
-            _reader(layout_root),
-            [
-                Subgrid(
-                    name="TEST",
-                    lat=(-23.0, -20.0),
-                    lon=(-50.0, -47.0),
-                )
-            ],
-            slots=SLOTS[:4],
-            num_future_samples=2,
+        shapefile = (
+            Shapefile(
+                key="test_shapes.shp",
+                location=StorageLocation(uri=str(generated_shapefile.parent)),
+            )
+            if with_shapefile
+            else None
         )
 
-        # Write results and plots, with the test shapefile
-        write_inference_results(
-            result,
-            open_storage(StorageLocation(uri=str(temp_output_dir))),
-            SLOTS[4],
+        outcome = nowcast(_plot_config(layout_root, temp_output_dir, shapefile))
+
+        assert outcome.exit_code == 0
+        plots = temp_output_dir / "plots"
+        assert sorted(path.name for path in plots.iterdir()) == [
+            "TEST_0000.png",
+            "TEST_0001.png",
+            "TEST_forecast.gif",
+        ]
+        for name in ("TEST_0000.png", "TEST_0001.png"):
+            assert (plots / name).read_bytes().startswith(PNG_SIGNATURE)
+        gif = plots / "TEST_forecast.gif"
+        assert gif.read_bytes().startswith(b"GIF89a")
+        with Image.open(gif) as image:
+            assert image.n_frames == 2
+        for path in plots.iterdir():
+            assert path.stat().st_mode & 0o777 == 0o600
+
+    @pytest.mark.plotting
+    @pytest.mark.usefixtures("offline_maps")
+    def test_missing_shapefile_part_fails_the_item(
+        self,
+        layout_root: Path,
+        temp_output_dir: Path,
+        generated_shapefile: Path,
+        tmp_path: Path,
+    ) -> None:
+        shapes = tmp_path / "shapes"
+        shapes.mkdir()
+        for suffix in (".shp", ".shx"):
+            shutil.copy(generated_shapefile.with_suffix(suffix), shapes)
+        shapefile = Shapefile(
+            key="test_shapes.shp", location=StorageLocation(uri=str(shapes))
         )
-        write_cloud_motion_plots(
-            result, str(temp_output_dir), str(test_shapefile_path)
-        )
 
-        # Verify plot directory created
-        plots_dir = temp_output_dir / "plots"
-        assert plots_dir.exists()
+        with pytest.raises(RunFailedError) as excinfo:
+            nowcast(_plot_config(layout_root, temp_output_dir, shapefile))
 
-        # Verify GIF created
-        gif_files = list(plots_dir.glob("*.gif"))
-        assert len(gif_files) > 0
-
-        # Verify frame images (if kept)
-        png_files = list(plots_dir.glob("*.png"))
-        assert len(png_files) > 0
+        (item,) = excinfo.value.outcome.items
+        assert item.status is ItemStatus.FAILED
+        assert item.error_type == "ObjectNotFoundError"
+        assert (temp_output_dir / "cod.parquet").exists()
+        assert not (temp_output_dir / "plots").exists()
 
 
 @pytest.mark.integration

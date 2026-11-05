@@ -1,21 +1,26 @@
-import os
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
-import cartopy
+import io
+import tempfile
+from collections.abc import Sequence
+from pathlib import Path, PurePosixPath
+from typing import Any, Final
+
 import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 import cartopy.io.shapereader as shpreader
-import matplotlib.animation as animation
-import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 from matplotlib import colors, rcParams
+from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
+from nwp_core.storage import Storage
 from PIL import Image
 
-from cod_nowcast_ons._storage import LocalBackend, StorageBackend
-
-if TYPE_CHECKING:  # pragma: no cover
-    from cartopy.mpl.geoaxes import GeoAxes
+_FIGSIZE_PIXELS: Final = (720, 720)
+_FRAME_INTERVAL_MS: Final = 300
 
 
 def _cod_colormap_and_norm() -> tuple[colors.Colormap, colors.BoundaryNorm]:
@@ -73,45 +78,56 @@ def _cod_colormap_and_norm() -> tuple[colors.Colormap, colors.BoundaryNorm]:
     return cmap, norm
 
 
+def read_shapes(storage: Storage, key: str) -> list[Any]:
+    """Read the geometries of the shapefile stored under ``key``.
+
+    The ``.shx`` and ``.dbf`` objects must sit beside the ``.shp`` object.
+    Cartopy's reader only takes a file name, so the three objects are copied
+    to a temporary folder first.
+
+    Raises:
+        ObjectNotFoundError: If one of the three objects is absent.
+    """
+    shp = PurePosixPath(key)
+    parts = {
+        ".shp": key,
+        ".shx": str(shp.with_suffix(".shx")),
+        ".dbf": str(shp.with_suffix(".dbf")),
+    }
+    with tempfile.TemporaryDirectory() as folder:
+        for suffix, part in parts.items():
+            with storage.open_read(part) as stream:
+                Path(folder, f"shapes{suffix}").write_bytes(stream.read())
+        reader = shpreader.Reader(str(Path(folder, "shapes.shp")))
+        try:
+            return list(reader.geometries())
+        finally:
+            reader.close()
+
+
 def render_cod_forecast_frame(
     cod_forecast: xr.DataArray,
     motion_field: np.ndarray,
     step: int,
-    figsize_pixels: tuple[int, int] = (720, 720),
-    image_output_dir: str = "steps",
-    image_prefix: str = "frame",
-    shapefile_path: str | None = None,
-    storage: StorageBackend | None = None,
-) -> str:
-    """Render a single COD forecast frame and save it to disk.
+    *,
+    shapes: Sequence[Any],
+) -> bytes:
+    """Render one COD forecast frame and return it as PNG bytes.
 
     Args:
         cod_forecast: 3D DataArray with dims (latitude, longitude, time).
         motion_field: 2xHxW motion field (U,V) from pysteps.
         step: Frame index (time dimension index) to render.
-        image_output_dir: Directory where the frame image will be saved.
-        shapefile_path: Optional path to shapefile for additional borders/outlines.
-            If not provided, only Cartopy's built-in coastlines and borders are used.
-        storage: Storage backend to use (defaults to LocalBackend).
-
-    Returns:
-        The saved filename for the rendered frame.
+        shapes: Geometries drawn as extra outlines on top of Cartopy's
+            coastlines and borders; empty draws none.
     """
-    if storage is None:
-        storage = LocalBackend()
-
-    storage.makedirs(image_output_dir)
-
     cmap, norm = _cod_colormap_and_norm()
 
-    shapefile = None
-    if shapefile_path:
-        shapefile = list(shpreader.Reader(shapefile_path).geometries())
-
-    plt.cla()
-    plt.close()
-    plt.figure(figsize=[p / rcParams["figure.dpi"] for p in figsize_pixels])
-    ax: GeoAxes = plt.axes(projection=ccrs.PlateCarree())
+    width, height = _FIGSIZE_PIXELS
+    dpi = rcParams["figure.dpi"]
+    fig = Figure(figsize=(width / dpi, height / dpi))
+    FigureCanvasAgg(fig)
+    ax: Any = fig.add_subplot(projection=ccrs.PlateCarree())
 
     minlon = cod_forecast.longitude.min().item()
     maxlon = cod_forecast.longitude.max().item()
@@ -136,8 +152,13 @@ def render_cod_forecast_frame(
         zorder=10,
     )
 
-    plt.colorbar(
-        img, label="COD", orientation="horizontal", pad=0.03, fraction=0.05
+    fig.colorbar(
+        img,
+        ax=ax,
+        label="COD",
+        orientation="horizontal",
+        pad=0.03,
+        fraction=0.05,
     )
 
     skip = (slice(None, None, 20), slice(None, None, 20))
@@ -145,11 +166,11 @@ def render_cod_forecast_frame(
     V = motion_field[1, :, :][skip].copy()
     x_grid = grid_lon[skip]
     y_grid = grid_lat[skip]
-    plt.quiver(x_grid, y_grid, U, V, width=0.0015, zorder=20)
+    ax.quiver(x_grid, y_grid, U, V, width=0.0015, zorder=20)
 
-    if shapefile:
+    if shapes:
         ax.add_geometries(
-            shapefile,
+            shapes,
             ccrs.PlateCarree(),
             edgecolor="black",
             facecolor="none",
@@ -159,7 +180,7 @@ def render_cod_forecast_frame(
 
     ax.coastlines(resolution="10m", color="black", linewidth=0.8, zorder=30)
     ax.add_feature(
-        cartopy.feature.BORDERS, edgecolor="black", linewidth=0.5, zorder=30
+        cfeature.BORDERS, edgecolor="black", linewidth=0.5, zorder=30
     )
     gl = ax.gridlines(
         crs=ccrs.PlateCarree(),
@@ -180,128 +201,30 @@ def render_cod_forecast_frame(
     ax.set_title(title_left, fontweight="bold", fontsize=10, loc="left")
     ax.set_title(title_right, fontsize=10, loc="right")
 
-    filename = storage.join_path(
-        image_output_dir, f"{image_prefix}_{str(step).zfill(4)}.png"
-    )
-
-    if hasattr(storage, "s3_client"):
-        import io
-
-        buf = io.BytesIO()
-        plt.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-        buf.seek(0)
-        storage.write_bytes(buf.read(), filename)
-        plt.close()
-    else:
-        plt.savefig(filename, bbox_inches="tight", pad_inches=0)
-        plt.close()
-
-    return filename
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="png", bbox_inches="tight", pad_inches=0)
+    return buffer.getvalue()
 
 
-def generate_cod_forecast_gif(
-    cod_forecast: xr.DataArray,
-    motion_field: np.ndarray,
-    figsize_pixels: tuple[int, int] = (720, 720),
-    output_gif_filename: str = "forecast.gif",
-    frame_interval_ms: int = 300,
-    repeat_delay_ms: int = 700,
-    image_output_dir: str = "steps",
-    image_prefix: str = "frame",
-    keep_frames: bool = False,
-    shapefile_path: str | None = None,
-    storage: StorageBackend | None = None,
-) -> None:
-    """Generate an animated GIF from COD forecast and motion field.
+def animate_frames(pngs: Sequence[bytes]) -> bytes:
+    """Compose the PNG frames, in order, into GIF bytes."""
+    frames = [np.asarray(Image.open(io.BytesIO(png))) for png in pngs]
 
-    This renders frame images using render_cod_forecast_frame and then composes
-    them into an animated GIF.
-
-    Args:
-        cod_forecast: 3D DataArray with dims (latitude, longitude, time).
-        motion_field: 2xHxW motion field (U,V) from pysteps.
-        figsize_pixels: Figure size in pixels (width, height).
-        output_gif_filename: Output filename for the GIF.
-        frame_interval_ms: Interval between frames in milliseconds.
-        repeat_delay_ms: Delay before repeating animation in milliseconds.
-        image_output_dir: Directory where frame images will be saved.
-        image_prefix: Prefix for frame image filenames.
-        keep_frames: Whether to keep individual frame images after GIF creation.
-        shapefile_path: Optional path to shapefile for additional borders/outlines.
-        storage: Storage backend to use (defaults to LocalBackend).
-    """
-    if storage is None:
-        storage = LocalBackend()
-
-    raw = np.array(cod_forecast).transpose((2, 0, 1))
-    n_leadtimes = raw.shape[0]
-
-    storage.makedirs(image_output_dir)
-
-    filenames = []
-    for step in range(n_leadtimes):
-        filenames.append(
-            render_cod_forecast_frame(
-                cod_forecast,
-                motion_field,
-                step,
-                figsize_pixels=figsize_pixels,
-                image_output_dir=image_output_dir,
-                image_prefix=image_prefix,
-                shapefile_path=shapefile_path,
-                storage=storage,
-            )
-        )
-
-    if hasattr(storage, "s3_client"):
-        import shutil
-        import tempfile
-
-        temp_dir = tempfile.mkdtemp()
-        local_filenames = []
-
-        for remote_path in filenames:
-            local_path = os.path.join(temp_dir, os.path.basename(remote_path))
-            data = storage.read_bytes(remote_path)
-            with open(local_path, "wb") as f:
-                f.write(data)
-            local_filenames.append(local_path)
-
-        images = [Image.open(fname) for fname in local_filenames]
-    else:
-        images = [Image.open(fname) for fname in filenames]
-
-    fig, ax = plt.subplots()
-    fig.set_size_inches(*[p / rcParams["figure.dpi"] for p in figsize_pixels])
+    width, height = _FIGSIZE_PIXELS
+    dpi = rcParams["figure.dpi"]
+    fig = Figure(figsize=(width / dpi, height / dpi))
+    FigureCanvasAgg(fig)
+    ax = fig.add_axes((0, 0, 1, 1))
     ax.axis("off")
-    plt.subplots_adjust(left=0, right=1, top=1, bottom=0, hspace=0, wspace=0)
-    plt.margins(0, 0)
-    im = ax.imshow(images[0], animated=True)
+    image = ax.imshow(frames[0], animated=True)
 
     def update(i: int) -> tuple[AxesImage]:
-        im.set_array(images[i])  # type: ignore[arg-type]  # PIL images expose the array interface
-        return (im,)
+        image.set_array(frames[i])
+        return (image,)
 
-    animation_fig = animation.FuncAnimation(
-        fig,
-        update,
-        frames=len(images),
-        interval=frame_interval_ms,
-        blit=True,
-        repeat_delay=repeat_delay_ms,
-    )
-
-    if hasattr(storage, "s3_client"):
-        temp_gif = tempfile.NamedTemporaryFile(suffix=".gif", delete=False)
-        animation_fig.save(temp_gif.name)
-        with open(temp_gif.name, "rb") as gif_file:
-            storage.write_bytes(gif_file.read(), output_gif_filename)
-        os.unlink(temp_gif.name)
-
-        shutil.rmtree(temp_dir)
-    else:
-        animation_fig.save(output_gif_filename)
-
-    if not keep_frames:
-        for fname in filenames:
-            storage.delete(fname)
+    animation = FuncAnimation(fig, update, frames=len(pngs))
+    with tempfile.TemporaryDirectory() as folder:
+        target = Path(folder, "forecast.gif")
+        writer = PillowWriter(fps=1000 / _FRAME_INTERVAL_MS)  # type: ignore[arg-type]  # the stub types fps as int, a float keeps the frame interval exact
+        animation.save(target, writer=writer)
+        return target.read_bytes()

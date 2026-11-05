@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 import io
-import posixpath
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Final
+from typing import Any, Final
 
 import pandas as pd
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 from nwp_core.storage import Storage
 
-from cod_nowcast_ons._config import Shapefile
 from cod_nowcast_ons._forecast import InferenceResult
-from cod_nowcast_ons._plots import generate_cod_forecast_gif
-from cod_nowcast_ons._storage import StorageFactory
+from cod_nowcast_ons._plots import animate_frames, render_cod_forecast_frame
 
 COD_PARQUET: Final = "cod.parquet"
+PLOTS_PREFIX: Final = "plots"
 
 SCHEMA: Final = pa.schema(
     [
@@ -26,12 +25,6 @@ SCHEMA: Final = pa.schema(
         pa.field("valor", pa.float32(), nullable=True),
     ]
 )
-
-
-def shapefile_path(shapefile: Shapefile | None) -> str | None:
-    if shapefile is None:
-        return None
-    return posixpath.join(shapefile.location.uri, shapefile.key)
 
 
 def write_inference_results(
@@ -70,25 +63,29 @@ def write_inference_results(
 
 
 def write_cloud_motion_plots(
-    result: InferenceResult,
-    output: str,
-    shapefile_path: str | None,
+    result: InferenceResult, outputs: Storage, shapes: Sequence[Any]
 ) -> None:
-    storage = StorageFactory.get_storage(output)
+    """Replace the forecast plots of every subgrid in ``outputs``.
 
-    for subgrid_name, subgrid_result in result.subgrid_results.items():
-        output_dir = storage.join_path(output, "plots")
-        storage.makedirs(output_dir)
-
-        generate_cod_forecast_gif(
-            subgrid_result.cod,
-            subgrid_result.motion_field,
-            image_output_dir=output_dir,
-            output_gif_filename=storage.join_path(
-                output_dir, f"{subgrid_name}_forecast.gif"
-            ),
-            image_prefix=subgrid_name,
-            keep_frames=True,
-            shapefile_path=shapefile_path,
-            storage=storage,
+    Each subgrid gets one ``plots/<name>_NNNN.png`` per lead time and one
+    ``plots/<name>_forecast.gif`` that animates them. ``shapes`` are extra
+    outlines drawn on every frame.
+    """
+    for name, subgrid_result in result.subgrid_results.items():
+        pngs = []
+        for step in range(subgrid_result.cod.sizes["time"]):
+            png = render_cod_forecast_frame(
+                subgrid_result.cod,
+                subgrid_result.motion_field,
+                step,
+                shapes=shapes,
+            )
+            outputs.write(
+                f"{PLOTS_PREFIX}/{name}_{step:04d}.png", png, mode="replace"
+            )
+            pngs.append(png)
+        outputs.write(
+            f"{PLOTS_PREFIX}/{name}_forecast.gif",
+            animate_frames(pngs),
+            mode="replace",
         )
