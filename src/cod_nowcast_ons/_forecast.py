@@ -1,17 +1,39 @@
+import contextlib
+import io
+import logging
+import threading
 import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from types import ModuleType
 
 import numpy as np
 import xarray as xr
+from nwp_core.logging import log_event
 
 from cod_nowcast_ons._config import Subgrid
 from cod_nowcast_ons._frames import InputData
 
-warnings.simplefilter("ignore", SyntaxWarning)
+_LOG = logging.getLogger(__name__)
+_PYSTEPS_LOCK = threading.Lock()
+_PYSTEPS: tuple[ModuleType, ModuleType] | None = None
 
-from pysteps import motion, nowcasts  # noqa: E402
+
+def load_pysteps() -> tuple[ModuleType, ModuleType]:
+    """Return pysteps.motion and pysteps.nowcasts, importing them once."""
+    global _PYSTEPS
+    with _PYSTEPS_LOCK:
+        if _PYSTEPS is None:
+            buffer = io.StringIO()
+            with warnings.catch_warnings(), contextlib.redirect_stdout(buffer):
+                warnings.simplefilter("ignore", SyntaxWarning)
+                from pysteps import motion, nowcasts
+            log_event(
+                _LOG, logging.DEBUG, "pysteps.import", stdout=buffer.getvalue()
+            )
+            _PYSTEPS = (motion, nowcasts)
+        return _PYSTEPS
 
 
 class CloudMotionForecast:
@@ -23,6 +45,7 @@ class CloudMotionForecast:
         self.cod = cod
 
     def _eval_motion_field(self, cod: np.ndarray) -> np.ndarray:
+        motion, _ = load_pysteps()
         oflow_method = motion.get_method(self.MOTION_FIELD_METHOD)
         motion_field: np.ndarray = oflow_method(cod)
         return motion_field
@@ -38,6 +61,7 @@ class CloudMotionForecast:
         motion_field: np.ndarray,
         n_leadtimes: int,
     ) -> xr.DataArray:
+        _, nowcasts = load_pysteps()
         extrapolate = nowcasts.get_method(self.NOWCAST_METHOD)
         cod_forecast = extrapolate(last_sample, motion_field, n_leadtimes)
         last_sample_time_step = self.cod.time.values[-1]
