@@ -10,7 +10,12 @@ import pytest
 import shapefile
 import xarray as xr
 
-from app.internal.config import Config, PostprocessingConfig, SubgridConfig
+from app.internal.config import SubgridConfig
+from tests.fixtures.goes_cod.materialize import (
+    FRAMES_PREFIX,
+    SOURCE,
+    materialize,
+)
 
 _WGS84_PRJ = (
     'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",'
@@ -27,9 +32,16 @@ _POINTS: list[tuple[float, float]] = [
 
 
 @pytest.fixture
-def test_data_dir() -> Path:
-    """Path to test fixture data directory."""
-    return Path(__file__).parent / "fixtures" / "data"
+def test_data_dir(tmp_path: Path) -> Path:
+    """Folder of the frames materialized from the committed text source.
+
+    The frames are written under the gold layout, so the returned
+    ``goes_processed`` folder is the one that ``app/`` reads.
+    """
+    root = tmp_path / "frames"
+    root.mkdir()
+    materialize(SOURCE, root)
+    return root / FRAMES_PREFIX
 
 
 @pytest.fixture(scope="session")
@@ -68,27 +80,6 @@ def sample_subgrid_config() -> SubgridConfig:
         name="test_region",
         lat=[-23.0, -20.0],
         lon=[-50.0, -47.0],
-    )
-
-
-@pytest.fixture
-def sample_config(test_data_dir: Path, temp_output_dir: Path) -> Config:
-    """Sample configuration for testing."""
-    return Config(
-        mode="inference",
-        input=str(test_data_dir),
-        output=str(temp_output_dir),
-        base_datetime=datetime(2024, 8, 1, 0, 50),
-        num_past_samples=6,
-        num_future_samples=3,
-        subgrids=[
-            SubgridConfig(
-                name="SE",
-                lat=[-23.0, -20.0],
-                lon=[-50.0, -47.0],
-            )
-        ],
-        postprocessing=PostprocessingConfig(plots=False, shapefile_path=None),
     )
 
 
