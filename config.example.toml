@@ -1,0 +1,62 @@
+# cod-nowcast-ons configuration.
+#
+# Precedence: command-line flag > environment variable > this file > default.
+# Every key can be set by an environment variable named COD_NOWCAST_ONS_<KEY>,
+# where nested keys are joined by "__": COD_NOWCAST_ONS_NUM_PAST_SAMPLES,
+# COD_NOWCAST_ONS_INPUT__URI, COD_NOWCAST_ONS_STORAGE__MAX_ATTEMPTS. The
+# subgrids list is set from one variable holding a JSON array.
+
+# Base instant of the forecast, in UTC, on a 10-minute slot with zero seconds.
+# Quote it so that the value is read as text.
+base_datetime = "2024-08-01T10:00:00Z"
+
+# Number of past frames used for motion flow estimation (at least 2).
+num_past_samples = 36
+
+# Number of future frames to forecast (at least 1).
+num_future_samples = 6
+
+# How far the newest input frame may lag the base instant: an ISO 8601
+# duration that is a positive multiple of 10 minutes.
+max_input_staleness = "PT10M"
+
+# Fewest input frames accepted, from 2 up to num_past_samples. When unset, all
+# num_past_samples frames are required.
+# min_input_frames = 36
+
+# Where the input frames are read from: an absolute local path or an S3
+# location.
+[input]
+uri = "/data/input"
+
+# Where the forecasts are written, with the same forms as the input.
+[output]
+uri = "/data/output"
+
+# Latitude/longitude subgrids: south and north, then west and east bounds in
+# degrees. Names are unique and are used in the output keys.
+[[subgrids]]
+name = "SE"
+lat = [-23.0, -2.0]
+lon = [-53.0, -35.0]
+
+[postprocessing]
+# Render the forecast plots.
+plots = false
+
+# Optional extra borders and outlines for the plots. Without it, only the
+# built-in coastlines and country borders are drawn. The key is the .shp
+# object under the location.
+# [postprocessing.shapefile]
+# key = "BR_UF_2022.shp"
+#
+# [postprocessing.shapefile.location]
+# uri = "/data/shapes"
+
+# Optional retry, timeout and connection-pool settings of the storage client;
+# the values below are the defaults.
+# [storage]
+# max_attempts = 5
+# connect_timeout_s = 10.0
+# read_timeout_s = 60.0
+# max_pool_connections = 10

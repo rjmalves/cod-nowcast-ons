@@ -11,5 +11,18 @@ predictions through radiation transfer models.
 
 import importlib.metadata
 
+from cod_nowcast_ons._config import (
+    NowcastConfig,
+    Postprocessing,
+    Shapefile,
+    Subgrid,
+)
+
 __version__ = importlib.metadata.version("cod-nowcast-ons")
-__all__ = ["__version__"]
+__all__ = [
+    "NowcastConfig",
+    "Postprocessing",
+    "Shapefile",
+    "Subgrid",
+    "__version__",
+]
