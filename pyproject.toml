@@ -23,7 +23,8 @@ dependencies = [
     "statsmodels>=0.14.5",
     "xarray>=2025.7.1",
     "boto3>=1.35.0",
-    "s3fs>=2024.10.0"
+    "s3fs>=2024.10.0",
+    "nwp-core[cli]>=0.5.0"
 ]
 
 [tool.hatch.version]
@@ -47,6 +48,7 @@ dev = [
     "boto3-stubs>=1.41.3",
     "ruff>=0.14.6",
     "pyshp>=3.0.2",
+    "nwp-core[skill]>=0.5.0",
 ]
 
 [project.scripts]
@@ -74,6 +76,9 @@ build-constraint-dependencies = [
     "trove-classifiers==2026.9.21.13",
     "wheel==0.48.0",
 ]
+
+[tool.uv.sources]
+nwp-core = { git = "https://github.com/rjmalves/nwp-core.git", rev = "956c56b66e2d3d893c5542e9114c07151d062219" }
 
 [tool.mypy]
 strict = true
