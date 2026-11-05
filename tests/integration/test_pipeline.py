@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import time
 from datetime import UTC
 from pathlib import Path
 
@@ -259,8 +260,6 @@ class TestPipelinePerformance:
         self, layout_root: Path, temp_output_dir: Path
     ) -> None:
         """Test that pipeline completes within acceptable time."""
-        import time
-
         # Time the pipeline
         start = time.time()
 
