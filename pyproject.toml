@@ -6,36 +6,28 @@ build-backend = "hatchling.build"
 name = "cod-nowcast-ons"
 description = "Cloud Optical Depth forecasts using GOES satellite images and a thin wrapper around the pySTEPS module."
 readme = "README.md"
+version = "0.2.0"
 requires-python = ">=3.11"
-dynamic = ["version"]
 dependencies = [
     "cartopy>=0.25.0",
+    "click>=8.2",
     "matplotlib>=3.10.3",
     "numpy>=2.3.2",
     "opencv-python-headless>=4.11.0.86",
-    "plotly>=6.2.0",
+    "pandas>=2.3.3",
+    "pillow>=12.0.0",
     "polars>=1.31.0",
     "pyarrow>=21.0.0",
-    "pyjson5>=2.0.0",
+    "pydantic>=2.11,<3",
     "pysteps>=1.18.1",
-    "python-dotenv>=1.1.1",
-    "requests>=2.32.4",
-    "statsmodels>=0.14.5",
     "xarray>=2025.7.1",
-    "boto3>=1.35.0",
-    "s3fs>=2024.10.0"
+    "nwp-core[cli]>=0.5.0"
 ]
-
-[tool.hatch.version]
-path = "app/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-include = [
-  "app/",
-  "main.py"
-]
+packages = ["src/cod_nowcast_ons"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=9.0.1",
     "pytest-cov>=7.0.0",
@@ -44,31 +36,53 @@ dev = [
     "scipy>=1.16.3",
     "mypy>=1.18.2",
     "pandas-stubs>=2.3.2.250926",
-    "boto3-stubs>=1.41.3",
     "ruff>=0.14.6",
+    "pyshp>=3.0.2",
+    "nwp-core[skill]>=0.5.0",
+    "griffe>=2.4.1",
 ]
 
 [project.scripts]
-cod-nowcast-ons = "main:main"
+cod-nowcast-ons = "cod_nowcast_ons.cli:main"
 
 [tool.ruff]
 line-length = 80
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint.isort]
-known-first-party = ["app"]
+known-first-party = ["cod_nowcast_ons"]
 
 [tool.uv]
-required-version = "==0.9.22"
+required-version = ">=0.9.22"
+build-constraint-dependencies = [
+    "cython==3.3.1",
+    "editables==0.6",
+    "hatchling==1.33.0",
+    "numpy==2.3.5",
+    "packaging==26.3",
+    "pathspec==1.1.1",
+    "pluggy==1.7.0",
+    "setuptools==84.2.1",
+    "tomlkit==0.15.2",
+    "trove-classifiers==2026.9.21.13",
+    "wheel==0.48.0",
+]
+
+[tool.uv.sources]
+nwp-core = { git = "https://github.com/rjmalves/nwp-core.git", rev = "956c56b66e2d3d893c5542e9114c07151d062219" }
 
 [tool.mypy]
 strict = true
 python_version = "3.11"
-files = ["app", "main.py", "tests"]
+files = ["src", "tests"]
+mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["cartopy.*", "pysteps.*", "s3fs.*", "scipy.*"]
+module = ["cartopy.*", "pysteps.*", "scipy.*", "shapefile", "shapefile.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=app --cov-report=term-missing"
+addopts = "--cov=cod_nowcast_ons --cov-report=term-missing"
+
+[tool.coverage.run]
+patch = ["subprocess"]

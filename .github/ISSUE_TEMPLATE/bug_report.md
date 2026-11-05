@@ -6,50 +6,78 @@ labels: bug
 assignees: ''
 ---
 
-## Descrição do Bug
+## Descrição do bug
 
 Uma descrição clara e concisa do problema.
 
-## Passos para Reproduzir
+## Passos para reproduzir
 
-1. Configure o ambiente com '...'
-2. Execute o comando '...'
-3. Observe o erro '...'
+Informe o comando executado e os passos até o problema.
 
-## Comportamento Esperado
+```bash
+cod-nowcast-ons nowcast --config config.toml
+```
+
+## Comportamento esperado
 
 O que você esperava que acontecesse.
 
-## Comportamento Observado
+## Comportamento observado
 
-O que realmente aconteceu.
+O que aconteceu de fato.
 
-## Logs de Erro
+## Código de saída
+
+O código de saída do comando (0, 1, 2, 3 ou 4):
+
+```text
 
 ```
-Cole aqui os logs de erro relevantes
+
+## Resumo da execução
+
+O JSON `nwp.run-summary/1` que a ferramenta imprime na saída padrão, quando houver:
+
+```json
+
+```
+
+## Logs
+
+As linhas JSON que a ferramenta imprime na saída de erro:
+
+```text
+
 ```
 
 ## Ambiente
 
-- **Versão do Python**: [ex: 3.11.0]
-- **Versão do pacote**: [ex: 1.0.0]
-- **Sistema Operacional**: [ex: Ubuntu 22.04]
-- **Docker** (se aplicável): [ex: sim/não, versão da imagem]
+- Saída de `cod-nowcast-ons --version`:
+- Versão do Python:
+- Sistema operacional:
+- Tag ou digest da imagem, se usar Docker:
+- Armazenamento (local ou S3):
 
-## Configuração Utilizada
+## Configuração
 
-```jsonc
-// Cole aqui seu config.jsonc (remova informações sensíveis)
+O arquivo de configuração TOML, sem credenciais, nomes de bucket nem caminhos internos:
+
+```toml
+
 ```
 
-## Dados de Exemplo
+Variáveis `COD_NOWCAST_ONS_*` definidas, com os valores sensíveis removidos:
 
-Se possível, descreva os dados que causam o problema (sem informações sensíveis):
-- Formato dos arquivos de entrada
-- Tamanho aproximado dos dados
-- Região geográfica (subgrid)
+## Dados de entrada
 
-## Contexto Adicional
+- Quadros presentes (quantidade e horários):
+- Subgrade usada:
 
-Qualquer outra informação relevante sobre o problema.
+## Contexto adicional
+
+Qualquer outra informação relevante.
+
+## Checklist
+
+- [ ] Verifiquei que não existe uma issue similar
+- [ ] Removi credenciais, nomes de bucket e caminhos internos da configuração e dos logs

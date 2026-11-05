@@ -1,0 +1,46 @@
+{
+  "commands": {
+    "nowcast": [
+      {
+        "choices": null,
+        "flag": false,
+        "names": [
+          "--config"
+        ]
+      }
+    ]
+  },
+  "environment": {
+    "config_file": "COD_NOWCAST_ONS_CONFIG",
+    "fields": {
+      "base_datetime": "COD_NOWCAST_ONS_BASE_DATETIME",
+      "input.anonymous": "COD_NOWCAST_ONS_INPUT__ANONYMOUS",
+      "input.endpoint_url": "COD_NOWCAST_ONS_INPUT__ENDPOINT_URL",
+      "input.provider_source": "COD_NOWCAST_ONS_INPUT__PROVIDER_SOURCE",
+      "input.storage_class": "COD_NOWCAST_ONS_INPUT__STORAGE_CLASS",
+      "input.uri": "COD_NOWCAST_ONS_INPUT__URI",
+      "max_input_staleness": "COD_NOWCAST_ONS_MAX_INPUT_STALENESS",
+      "min_input_frames": "COD_NOWCAST_ONS_MIN_INPUT_FRAMES",
+      "num_future_samples": "COD_NOWCAST_ONS_NUM_FUTURE_SAMPLES",
+      "num_past_samples": "COD_NOWCAST_ONS_NUM_PAST_SAMPLES",
+      "output.anonymous": "COD_NOWCAST_ONS_OUTPUT__ANONYMOUS",
+      "output.endpoint_url": "COD_NOWCAST_ONS_OUTPUT__ENDPOINT_URL",
+      "output.provider_source": "COD_NOWCAST_ONS_OUTPUT__PROVIDER_SOURCE",
+      "output.storage_class": "COD_NOWCAST_ONS_OUTPUT__STORAGE_CLASS",
+      "output.uri": "COD_NOWCAST_ONS_OUTPUT__URI",
+      "postprocessing.plots": "COD_NOWCAST_ONS_POSTPROCESSING__PLOTS",
+      "postprocessing.shapefile.key": "COD_NOWCAST_ONS_POSTPROCESSING__SHAPEFILE__KEY",
+      "postprocessing.shapefile.location.anonymous": "COD_NOWCAST_ONS_POSTPROCESSING__SHAPEFILE__LOCATION__ANONYMOUS",
+      "postprocessing.shapefile.location.endpoint_url": "COD_NOWCAST_ONS_POSTPROCESSING__SHAPEFILE__LOCATION__ENDPOINT_URL",
+      "postprocessing.shapefile.location.provider_source": "COD_NOWCAST_ONS_POSTPROCESSING__SHAPEFILE__LOCATION__PROVIDER_SOURCE",
+      "postprocessing.shapefile.location.storage_class": "COD_NOWCAST_ONS_POSTPROCESSING__SHAPEFILE__LOCATION__STORAGE_CLASS",
+      "postprocessing.shapefile.location.uri": "COD_NOWCAST_ONS_POSTPROCESSING__SHAPEFILE__LOCATION__URI",
+      "storage.connect_timeout_s": "COD_NOWCAST_ONS_STORAGE__CONNECT_TIMEOUT_S",
+      "storage.max_attempts": "COD_NOWCAST_ONS_STORAGE__MAX_ATTEMPTS",
+      "storage.max_pool_connections": "COD_NOWCAST_ONS_STORAGE__MAX_POOL_CONNECTIONS",
+      "storage.read_timeout_s": "COD_NOWCAST_ONS_STORAGE__READ_TIMEOUT_S",
+      "subgrids": "COD_NOWCAST_ONS_SUBGRIDS"
+    }
+  },
+  "group_options": []
+}

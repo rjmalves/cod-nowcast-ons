@@ -1,8 +1,8 @@
-.PHONY: help install install-user uninstall uninstall-user reinstall test test-unit test-integration test-cov test-s3 lint format typecheck image smoke gate clean
+.PHONY: help install install-user uninstall uninstall-user reinstall test test-unit test-integration test-cov lint format typecheck image smoke gate clean
 
 IMAGE ?= cod-nowcast-ons:local
 IMAGE_SOURCE ?= https://github.com/rjmalves/cod-nowcast-ons
-IMPORT_CHAIN := import cv2, pysteps; from pysteps import motion
+IMPORT_CHAIN := import cod_nowcast_ons, cv2, pysteps; from pysteps import motion
 
 help:
 	@echo "cod-nowcast-ons - Installation and Management"
@@ -19,7 +19,6 @@ help:
 	@echo "  make test-unit      - Run unit tests only"
 	@echo "  make test-integration - Run integration tests only"
 	@echo "  make test-cov       - Run tests with coverage report"
-	@echo "  make test-s3        - Run S3-specific tests"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  make lint           - Run ruff check and ruff format --check"
@@ -76,12 +75,8 @@ test-integration:
 
 test-cov:
 	@echo "Running tests with coverage..."
-	@uv run --no-sync pytest --cov=app --cov-report=html --cov-report=term -v
+	@uv run --no-sync pytest --cov-report=html --cov-report=term -v
 	@echo "Coverage report generated in htmlcov/"
-
-test-s3:
-	@echo "Running S3-specific tests..."
-	@uv run --no-sync pytest -m s3 -v
 
 lint:
 	@echo "Running linter..."

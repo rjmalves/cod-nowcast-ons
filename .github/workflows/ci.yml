@@ -1,4 +1,4 @@
-# nwp-core-template: ci.yml 0.1.0
+# nwp-core-template: ci.yml 0.5.0
 # Copy to .github/workflows/ci.yml; the scripts and the gate go to ci/, the
 # Dockerfile to the repository root.
 #
@@ -33,7 +33,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version-file: pyproject.toml
+          version: "0.9.22"
           enable-cache: false
       - name: sync
         env:
@@ -61,7 +61,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version-file: pyproject.toml
+          version: "0.9.22"
           enable-cache: false
       - name: sync
         env:
@@ -89,7 +89,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          version-file: pyproject.toml
+          version: "0.9.22"
           enable-cache: false
       - name: sync
         env:
@@ -111,10 +111,10 @@ jobs:
 
   gate:
     runs-on: ubuntu-24.04
-    # Local change to the template, which leaves the denylist opt-in
-    # (L-ADR-032): pushes and pull requests from this repository's branches
-    # fail without it. Fork pull requests and runs started by Dependabot never
-    # get the secret (SR-018-06) and run the shape rules only.
+    # Local change to the template, which leaves the denylist opt-in: pushes
+    # and pull requests from this repository's branches fail without it. Fork
+    # pull requests and runs started by Dependabot never get the secret and
+    # run the shape rules only.
     env:
       REQUIRE_DENYLIST: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' && 'yes' || '' }}
     steps:
@@ -124,8 +124,9 @@ jobs:
           persist-credentials: false
       - name: provision
         run: python3 ci/gate/run_gate.py --provision
-      # No tree step in this copy: the tree scan reports the committed binary
-      # test fixtures as unscannable.
+      # Local change to the template: no tree step. CI scans only the diff of each
+      # change; the tree scan with the denylist required is run by hand on the
+      # release commit.
       - name: diff
         env:
           NWP_GATE_DENYLIST: ${{ secrets.NWP_GATE_DENYLIST }}
@@ -137,7 +138,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       # Edit point: the statement that imports the tool's package chain.
-      IMPORT_CHAIN: import cv2, pysteps; from pysteps import motion
+      IMPORT_CHAIN: import cod_nowcast_ons, cv2, pysteps; from pysteps import motion
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -160,6 +161,8 @@ jobs:
         env:
           IMAGE_ID: ${{ steps.build.outputs.id }}
         run: python3 ci/check_image.py "$IMAGE_ID" --imports "$IMPORT_CHAIN"
+      # Local change to the template: runs the image on the fixture frames, because
+      # the import check passes on an image that crashes at its first nowcast.
       - name: fixture nowcast
         env:
           IMAGE_ID: ${{ steps.build.outputs.id }}

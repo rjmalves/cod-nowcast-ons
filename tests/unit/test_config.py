@@ -1,257 +1,287 @@
-from datetime import datetime
+from __future__ import annotations
+
+import json
+import math
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from nwp_core.config import content_parameters, load_config
+from nwp_core.errors import ConfigError, exit_code_for
+from nwp_core.storage import StorageSettings
 
-from app.internal.config import Config, PostprocessingConfig, SubgridConfig
+from cod_nowcast_ons import NowcastConfig
+from cod_nowcast_ons._config import ENV_PREFIX, SLOT
+
+_EXAMPLE = Path(__file__).resolve().parents[2] / "config.example.toml"
+_VALID = """\
+base_datetime = "2024-02-07T00:20:00Z"
+num_past_samples = 3
+num_future_samples = 3
+
+[input]
+uri = "{root}"
+
+[output]
+uri = "{root}"
+
+[[subgrids]]
+name = "FIXTURE"
+lat = [-23.0, -20.0]
+lon = [-50.0, -47.0]
+"""
 
 
-class TestSubgridConfig:
-    """Test SubgridConfig dataclass."""
-
-    def test_parse_valid(self) -> None:
-        """Test parsing valid subgrid dictionary."""
-        data = {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-        config = SubgridConfig.parse(data)
-
-        assert config.name == "SE"
-        assert config.lat == [-23.0, -20.0]
-        assert config.lon == [-50.0, -47.0]
-
-    def test_direct_construction(self) -> None:
-        """Test direct construction."""
-        config = SubgridConfig(
-            name="test", lat=[-10.0, -5.0], lon=[-60.0, -55.0]
-        )
-        assert config.name == "test"
-        assert len(config.lat) == 2
-        assert len(config.lon) == 2
+def _subgrids(*subgrids: dict[str, object]) -> str:
+    return json.dumps(list(subgrids))
 
 
-class TestPostprocessingConfig:
-    """Test PostprocessingConfig dataclass."""
+def _subgrid(**override: object) -> dict[str, object]:
+    return {
+        "name": "FIXTURE",
+        "lat": [-23.0, -20.0],
+        "lon": [-50.0, -47.0],
+    } | override
 
-    def test_parse_with_plots(self) -> None:
-        """Test parsing with plots enabled."""
-        config = PostprocessingConfig.parse({"plots": True})
-        assert config.plots is True
-        assert config.shapefile_path is None
 
-    def test_parse_default(self) -> None:
-        """Test parsing with missing plots key."""
-        config = PostprocessingConfig.parse({})
-        assert config.plots is False
-        assert config.shapefile_path is None
+def _load(
+    tmp_path: Path,
+    env: dict[str, str] | None = None,
+    cli: dict[str, object] | None = None,
+) -> NowcastConfig:
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(_VALID.format(root=tmp_path))
+    return load_config(
+        NowcastConfig,
+        env_prefix=ENV_PREFIX,
+        config_file=config_file,
+        env=env or {},
+        cli=cli,
+    )
 
-    def test_parse_false(self) -> None:
-        """Test parsing with plots explicitly false."""
-        config = PostprocessingConfig.parse({"plots": False})
-        assert config.plots is False
 
-    def test_parse_with_shapefile(self) -> None:
-        """Test parsing with shapefile_path."""
-        config = PostprocessingConfig.parse(
+def _assert_rejected(tmp_path: Path, env: dict[str, str], loc: str) -> None:
+    with pytest.raises(ConfigError) as caught:
+        _load(tmp_path, env)
+    assert f"{loc}: " in str(caught.value)
+    assert exit_code_for(caught.value) == 2
+
+
+def test_example_config_loads() -> None:
+    cfg = load_config(
+        NowcastConfig,
+        env_prefix=ENV_PREFIX,
+        config_file=_EXAMPLE,
+        env={},
+    )
+
+    assert [subgrid.name for subgrid in cfg.subgrids] == ["SE"]
+    assert cfg.base_datetime == datetime(2024, 8, 1, 10, tzinfo=UTC)
+    assert cfg.max_input_staleness == SLOT
+    assert cfg.min_input_frames is None
+    assert cfg.storage == StorageSettings()
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "2024-02-07T00:20:00Z",
+        "2024-02-07T03:20:00+03:00",
+        "2024-02-07T00:20:00",
+    ],
+)
+def test_base_datetime_is_normalized_to_utc(tmp_path: Path, text: str) -> None:
+    cfg = _load(tmp_path, {"COD_NOWCAST_ONS_BASE_DATETIME": text})
+
+    assert cfg.base_datetime == datetime(2024, 2, 7, 0, 20, tzinfo=UTC)
+    assert cfg.base_datetime.tzinfo is UTC
+
+
+def test_sources_take_precedence(tmp_path: Path) -> None:
+    future = {"COD_NOWCAST_ONS_NUM_FUTURE_SAMPLES": "4"}
+    attempts = {"COD_NOWCAST_ONS_STORAGE__MAX_ATTEMPTS": "7"}
+
+    assert _load(tmp_path).num_future_samples == 3
+    assert _load(tmp_path, future).num_future_samples == 4
+    cli: dict[str, object] = {"num_future_samples": 5}
+    assert _load(tmp_path, future, cli).num_future_samples == 5
+    assert _load(tmp_path, attempts).storage.max_attempts == 7
+
+
+@pytest.mark.parametrize(
+    ("env", "loc"),
+    [
+        pytest.param(
+            {"COD_NOWCAST_ONS_MAX_INPUT_STALENESS": "PT5M"},
+            "max_input_staleness",
+            id="staleness-below-slot",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_MAX_INPUT_STALENESS": "PT15M"},
+            "max_input_staleness",
+            id="staleness-off-slot",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_MIN_INPUT_FRAMES": "1"},
+            "min_input_frames",
+            id="min-frames-below-two",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_MIN_INPUT_FRAMES": "4"},
+            "min_input_frames",
+            id="min-frames-above-past",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_BASE_DATETIME": "2024-02-07T00:25:00Z"},
+            "base_datetime",
+            id="base-off-slot",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_BASE_DATETIME": "2024-02-07T00:20:30Z"},
+            "base_datetime",
+            id="base-with-seconds",
+        ),
+    ],
+)
+def test_invalid_guard_value_is_a_config_error(
+    tmp_path: Path, env: dict[str, str], loc: str
+) -> None:
+    _assert_rejected(tmp_path, env, loc)
+
+
+@pytest.mark.parametrize(
+    ("env", "loc"),
+    [
+        pytest.param(
+            {"COD_NOWCAST_ONS_INPUT__URI": "relative/input"},
+            "input.uri",
+            id="relative-input",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_MODE": "inference"}, "mode", id="mode-key"
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_SUBGRIDS": _subgrids(_subgrid(), _subgrid())},
+            "subgrids",
+            id="duplicate-names",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_SUBGRIDS": _subgrids(_subgrid(name=".."))},
+            "subgrids.0.name",
+            id="name-dot-dot",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_SUBGRIDS": _subgrids(_subgrid(name=".nwp-x"))},
+            "subgrids.0.name",
+            id="name-reserved-prefix",
+        ),
+        pytest.param(
             {
-                "plots": True,
-                "shapefile_path": "data/shapes/test.shp",
-            }
-        )
-        assert config.plots is True
-        assert config.shapefile_path == "data/shapes/test.shp"
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lat=[-20.0, -23.0])
+                )
+            },
+            "subgrids.0",
+            id="reversed-lat",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lon=[-47.0, -50.0])
+                )
+            },
+            "subgrids.0",
+            id="reversed-lon",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_SUBGRIDS": "[]"}, "subgrids", id="no-subgrids"
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_NUM_PAST_SAMPLES": "1"},
+            "num_past_samples",
+            id="one-past-sample",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_NUM_FUTURE_SAMPLES": "0"},
+            "num_future_samples",
+            id="no-future-samples",
+        ),
+        pytest.param(
+            {"COD_NOWCAST_ONS_MAX_INPUT_STALENESS": "P1M"},
+            "max_input_staleness",
+            id="calendar-unit-staleness",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lat=[-math.inf, -20.0])
+                )
+            },
+            "subgrids.0.lat.0",
+            id="lat-infinite",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lat=[-91.0, -20.0])
+                )
+            },
+            "subgrids.0.lat.0",
+            id="lat-below-range",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lon=[-50.0, 181.0])
+                )
+            },
+            "subgrids.0.lon.1",
+            id="lon-above-range",
+        ),
+        pytest.param(
+            {
+                "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                    _subgrid(lon=[math.nan, -47.0])
+                )
+            },
+            "subgrids.0.lon.0",
+            id="lon-nan",
+        ),
+    ],
+)
+def test_invalid_value_is_a_config_error(
+    tmp_path: Path, env: dict[str, str], loc: str
+) -> None:
+    _assert_rejected(tmp_path, env, loc)
 
 
-class TestConfig:
-    """Test main Config dataclass."""
+def test_subgrid_accepts_the_coordinate_limits(tmp_path: Path) -> None:
+    cfg = _load(
+        tmp_path,
+        {
+            "COD_NOWCAST_ONS_SUBGRIDS": _subgrids(
+                _subgrid(lat=[-90.0, 90.0], lon=[-180.0, 180.0])
+            )
+        },
+    )
 
-    def test_parse_complete_config(self) -> None:
-        """Test parsing a complete configuration."""
-        data = {
-            "mode": "inference",
-            "input": "data/input",
-            "output": "data/output",
-            "base_datetime": "2024-08-01T10:00:00",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-            ],
-            "postprocessing": {"plots": True},
-        }
-
-        config = Config.parse(data)
-
-        assert config.mode == "inference"
-        assert config.input == "data/input"
-        assert config.output == "data/output"
-        assert isinstance(config.base_datetime, datetime)
-        assert config.base_datetime.year == 2024
-        assert config.num_past_samples == 6
-        assert config.num_future_samples == 3
-        assert len(config.subgrids) == 1
-        assert config.subgrids[0].name == "SE"
-        assert config.postprocessing.plots is True
-
-    def test_parse_minimal_config(self) -> None:
-        """Test parsing minimal configuration (no postprocessing)."""
-        data = {
-            "mode": "inference",
-            "input": "data/input",
-            "output": "data/output",
-            "base_datetime": "2024-08-01T10:00:00",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-            ],
-        }
-
-        config = Config.parse(data)
-        assert config.postprocessing.plots is False
-
-    def test_parse_multiple_subgrids(self) -> None:
-        """Test parsing configuration with multiple subgrids."""
-        data = {
-            "mode": "inference",
-            "input": "data/input",
-            "output": "data/output",
-            "base_datetime": "2024-08-01T10:00:00",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]},
-                {"name": "NE", "lat": [-18.0, -15.0], "lon": [-48.0, -45.0]},
-            ],
-        }
-
-        config = Config.parse(data)
-        assert len(config.subgrids) == 2
-        assert config.subgrids[0].name == "SE"
-        assert config.subgrids[1].name == "NE"
-
-    def test_parse_s3_paths(self) -> None:
-        """Test parsing configuration with S3 paths."""
-        data = {
-            "mode": "inference",
-            "input": "s3://example-bucket/input",
-            "output": "s3://example-bucket/output",
-            "base_datetime": "2024-08-01T10:00:00",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-            ],
-        }
-
-        config = Config.parse(data)
-        assert config.input.startswith("s3://")
-        assert config.output.startswith("s3://")
-
-    def test_from_json(self, tmp_path: Path) -> None:
-        """Test loading configuration from JSON file."""
-        config_data = """{
-            "mode": "inference",
-            "input": "data/input",
-            "output": "data/output",
-            "base_datetime": "2024-08-01T10:00:00",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-            ]
-        }"""
-
-        config_file = tmp_path / "config.jsonc"
-        config_file.write_text(config_data)
-
-        config = Config.from_json(str(config_file))
-        assert config.mode == "inference"
-        assert config.num_past_samples == 6
-
-    def test_from_json_with_comments(self, tmp_path: Path) -> None:
-        """Test loading JSON with comments (JSONC format)."""
-        config_data = """{
-            // This is a comment
-            "mode": "inference",
-            "input": "data/input",  // inline comment
-            "output": "data/output",
-            "base_datetime": "2024-08-01T10:00:00",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            /* Multi-line
-               comment */
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-            ]
-        }"""
-
-        config_file = tmp_path / "config.jsonc"
-        config_file.write_text(config_data)
-
-        config = Config.from_json(str(config_file))
-        assert config.mode == "inference"
-
-    def test_invalid_datetime_format(self) -> None:
-        """Test that invalid datetime raises error."""
-        data = {
-            "mode": "inference",
-            "input": "data/input",
-            "output": "data/output",
-            "base_datetime": "invalid-datetime",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-            ],
-        }
-
-        with pytest.raises(ValueError):
-            Config.parse(data)
-
-    def test_missing_required_field(self) -> None:
-        """Test that missing required field raises error."""
-        data = {
-            "mode": "inference",
-            "input": "data/input",
-            # Missing output
-            "base_datetime": "2024-08-01T10:00:00",
-            "num_past_samples": 6,
-            "num_future_samples": 3,
-            "subgrids": [
-                {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-            ],
-        }
-
-        with pytest.raises(KeyError):
-            Config.parse(data)
+    assert cfg.subgrids[0].lat == (-90.0, 90.0)
+    assert cfg.subgrids[0].lon == (-180.0, 180.0)
 
 
-@pytest.mark.unit
-def test_config_roundtrip(tmp_path: Path) -> None:
-    """Test that config can be saved and loaded preserving values."""
-    import json
+def test_operational_fields_select_no_content(tmp_path: Path) -> None:
+    cfg = _load(tmp_path)
 
-    original_data = {
-        "mode": "inference",
-        "input": "data/input",
-        "output": "data/output",
-        "base_datetime": "2024-08-01T10:00:00",
-        "num_past_samples": 6,
-        "num_future_samples": 3,
-        "subgrids": [
-            {"name": "SE", "lat": [-23.0, -20.0], "lon": [-50.0, -47.0]}
-        ],
-        "postprocessing": {"plots": True},
-    }
-
-    # Save
-    config_file = tmp_path / "config.json"
-    with open(config_file, "w") as f:
-        json.dump(original_data, f)
-
-    # Load
-    config = Config.from_json(str(config_file))
-
-    # Verify
-    assert config.mode == original_data["mode"]
-    assert config.num_past_samples == original_data["num_past_samples"]
-    assert config.postprocessing.plots is True
+    assert content_parameters(
+        cfg, ["num_past_samples", "num_future_samples"]
+    ) == {"num_past_samples": 3, "num_future_samples": 3}
+    for name in (
+        "base_datetime",
+        "input.uri",
+        "output.uri",
+        "max_input_staleness",
+        "min_input_frames",
+        "storage.max_attempts",
+    ):
+        with pytest.raises(ConfigError):
+            content_parameters(cfg, [name])

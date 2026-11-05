@@ -1,0 +1,240 @@
+{
+  "$defs": {
+    "CountsSummary": {
+      "properties": {
+        "failed": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "not_ready": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "not_run": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "skipped": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "succeeded": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "succeeded",
+        "skipped",
+        "not_ready",
+        "failed",
+        "not_run"
+      ],
+      "type": "object"
+    },
+    "ErrorSummary": {
+      "properties": {
+        "message": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "message"
+      ],
+      "type": "object"
+    },
+    "ItemSummary": {
+      "properties": {
+        "artifacts_written": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "bytes_written": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "duration_s": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "succeeded",
+            "skipped",
+            "not_ready",
+            "failed",
+            "not_run"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "reason",
+        "error",
+        "duration_s",
+        "bytes_written",
+        "artifacts_written"
+      ],
+      "type": "object"
+    },
+    "WindowSummary": {
+      "properties": {
+        "end": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "start": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "bytes_written": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "config": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "counts": {
+      "$ref": "#/$defs/CountsSummary"
+    },
+    "duration_s": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "exit_code": {
+      "maximum": 4,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "fatal_error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorSummary"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "finished_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/ItemSummary"
+      },
+      "type": "array"
+    },
+    "nwp_core_version": {
+      "type": "string"
+    },
+    "reason_counts": {
+      "additionalProperties": {
+        "patternProperties": {
+          "^[A-Za-z][A-Za-z0-9_]*$": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "propertyNames": {
+        "enum": [
+          "succeeded",
+          "skipped",
+          "not_ready",
+          "failed",
+          "not_run"
+        ]
+      },
+      "type": "object"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "nwp.run-summary/1",
+      "type": "string"
+    },
+    "started_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "tool": {
+      "type": "string"
+    },
+    "tool_version": {
+      "type": "string"
+    },
+    "window": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/WindowSummary"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "tool",
+    "tool_version",
+    "nwp_core_version",
+    "run_id",
+    "started_at",
+    "finished_at",
+    "duration_s",
+    "exit_code",
+    "window",
+    "config",
+    "counts",
+    "reason_counts",
+    "fatal_error",
+    "bytes_written",
+    "items"
+  ],
+  "type": "object"
+}
