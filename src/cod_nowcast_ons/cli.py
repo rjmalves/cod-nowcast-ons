@@ -1,47 +1,35 @@
-import argparse
-import sys
-from pathlib import Path
-from traceback import print_exc
+from __future__ import annotations
 
-from nwp_core.config import load_config
+from pathlib import Path
+from typing import NoReturn
+
+import click
+from nwp_core.cli import CliRun, common_options, run_cli
+from nwp_core.config import load_config, secret_values
+from nwp_core.logging import register_secrets
+from nwp_core.run import RunOutcome
 
 from cod_nowcast_ons import __version__, nowcast
+from cod_nowcast_ons._api import TOOL
 from cod_nowcast_ons._config import ENV_PREFIX, NowcastConfig
 
-__all__ = ["main"]
+__all__ = ["cli", "main"]
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Cloud Optical Depth forecasts using GOES satellite images and pySTEPS"
-    )
-    parser.add_argument(
-        "--config",
-        type=Path,
-        default=None,
-        help="Local TOML file with the tool configuration.",
-    )
-    parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}"
-    )
-    return parser
+@click.group("cod-nowcast-ons", no_args_is_help=True)
+def cli() -> None:
+    """Cloud optical depth nowcasts from GOES frames."""
 
 
-def main() -> None:
-    parser = build_parser()
-    args = parser.parse_args()
-
-    try:
-        nowcast(
-            load_config(
-                NowcastConfig, env_prefix=ENV_PREFIX, config_file=args.config
-            )
-        )
-    except Exception as e:
-        print(f"Error: {e}")
-        print_exc()
-        sys.exit(1)
+@cli.command("nowcast")
+@common_options
+@click.pass_obj
+def nowcast_command(run: CliRun, *, config: Path | None) -> RunOutcome:
+    """Run one nowcast at base_datetime."""
+    cfg = load_config(NowcastConfig, env_prefix=ENV_PREFIX, config_file=config)
+    register_secrets(secret_values(cfg))
+    return nowcast(cfg, run_id=run.run_id, started_at=run.anchor)
 
 
-if __name__ == "__main__":
-    main()
+def main() -> NoReturn:
+    run_cli(cli, tool=TOOL, version=__version__)

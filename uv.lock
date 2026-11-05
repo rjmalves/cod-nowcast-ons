@@ -444,6 +444,7 @@ source = { editable = "." }
 dependencies = [
     { name = "boto3" },
     { name = "cartopy" },
+    { name = "click" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "nwp-core", extra = ["cli"] },
@@ -479,6 +480,7 @@ dev = [
 requires-dist = [
     { name = "boto3", specifier = ">=1.35.0" },
     { name = "cartopy", specifier = ">=0.25.0" },
+    { name = "click", specifier = ">=8.2" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "numpy", specifier = ">=2.3.2" },
     { name = "nwp-core", extras = ["cli"], git = "https://github.com/rjmalves/nwp-core.git?rev=956c56b66e2d3d893c5542e9114c07151d062219" },

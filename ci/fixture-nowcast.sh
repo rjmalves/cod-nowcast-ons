@@ -15,4 +15,4 @@ exec docker run --rm --network none --read-only --tmpfs /tmp --cap-drop ALL \
   --user 54321:54321 \
   --mount "type=bind,src=$root/tests/fixtures/data,dst=/fixtures/goes_processed,readonly" \
   --mount "type=bind,src=$root/ci,dst=/ci,readonly" \
-  "$1" --config /ci/fixture-nowcast.toml
+  "$1" nowcast --config /ci/fixture-nowcast.toml
