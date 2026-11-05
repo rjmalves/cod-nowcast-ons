@@ -7,9 +7,23 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
+import shapefile
 import xarray as xr
 
 from app.internal.config import Config, PostprocessingConfig, SubgridConfig
+
+_WGS84_PRJ = (
+    'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",'
+    'SPHEROID["WGS_1984",6378137,298.257223563]],'
+    'PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]'
+)
+_POINTS: list[tuple[float, float]] = [
+    (-50.0, -23.0),
+    (-47.0, -23.0),
+    (-47.0, -20.0),
+    (-50.0, -20.0),
+    (-50.0, -23.0),
+]
 
 
 @pytest.fixture
@@ -18,16 +32,26 @@ def test_data_dir() -> Path:
     return Path(__file__).parent / "fixtures" / "data"
 
 
+@pytest.fixture(scope="session")
+def generated_shapefile(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Write the one-polygon test shapefile once per session.
+
+    Returns the path of the generated ``test_shapes.shp``.
+    """
+    base = tmp_path_factory.mktemp("shapefile") / "test_shapes"
+    w = shapefile.Writer(str(base), shapeType=shapefile.POLYGON)
+    w.field("name", "C", size=50)
+    w.poly([_POINTS])
+    w.record("TestRegion")
+    w.close()
+    base.with_suffix(".prj").write_text(_WGS84_PRJ, encoding="ascii")
+    return base.with_suffix(".shp")
+
+
 @pytest.fixture
-def test_shapefile_path() -> Path:
+def test_shapefile_path(generated_shapefile: Path) -> Path:
     """Path to test shapefile for plotting tests."""
-    return (
-        Path(__file__).parent
-        / "fixtures"
-        / "data"
-        / "shapes"
-        / "test_shapes.shp"
-    )
+    return generated_shapefile
 
 
 @pytest.fixture
