@@ -1,11 +1,9 @@
 import tempfile
 from collections.abc import Generator
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import polars as pl
 import pytest
 import shapefile
 import xarray as xr
@@ -135,79 +133,6 @@ def sample_motion_field() -> np.ndarray:
     return np.random.randn(2, 10, 10) * 0.5
 
 
-@pytest.fixture
-def sample_parquet_data() -> pl.DataFrame:
-    """Create a small synthetic parquet-compatible dataframe."""
-    np.random.seed(42)
-
-    # Create grid
-    n_lat, n_lon = 10, 10
-    lats = np.linspace(-23.0, -20.0, n_lat)
-    lons = np.linspace(-50.0, -47.0, n_lon)
-
-    # Meshgrid
-    lat_grid, lon_grid = np.meshgrid(lats, lons, indexing="ij")
-
-    # Flatten
-    lat_flat = lat_grid.flatten()
-    lon_flat = lon_grid.flatten()
-
-    # Generate COD values
-    cod_flat = np.random.gamma(2, 2, size=len(lat_flat)).astype(np.float32)
-
-    # Create timestamp
-    timestamp = datetime(2024, 8, 1, 0, 0)
-
-    return pl.DataFrame(
-        {
-            "time": [timestamp] * len(lat_flat),
-            "latitude": lat_flat,
-            "longitude": lon_flat,
-            "cod": cod_flat,
-        }
-    )
-
-
-@pytest.fixture
-def mock_s3_bucket() -> Generator[str, None, None]:
-    """
-    Create a mock S3 bucket using moto.
-
-    Yields:
-        str: Bucket name for testing
-
-    Note:
-        This requires moto to be installed: pip install moto[s3]
-        Tests using this fixture should be marked with @pytest.mark.s3
-    """
-    try:
-        import boto3
-        from moto import mock_aws
-    except ImportError:
-        pytest.skip("moto not installed - skipping S3 tests")
-
-    # Start mock and keep it active during the test
-    mock = mock_aws()
-    mock.start()
-
-    try:
-        # Create mock S3 client
-        s3_client = boto3.client(
-            "s3",
-            region_name="us-east-1",
-            aws_access_key_id="testing",
-            aws_secret_access_key="testing",
-        )
-
-        # Create test bucket
-        bucket_name = "test-bucket"
-        s3_client.create_bucket(Bucket=bucket_name)
-
-        yield bucket_name
-    finally:
-        mock.stop()
-
-
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Register the switch that rewrites the regression golden."""
     parser.addoption(
@@ -229,9 +154,6 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line(
         "markers", "slow: Tests that take a long time to run"
-    )
-    config.addinivalue_line(
-        "markers", "s3: Tests that require S3/moto (AWS simulation)"
     )
     config.addinivalue_line(
         "markers", "plotting: Tests that generate plots (skip on CI if needed)"
