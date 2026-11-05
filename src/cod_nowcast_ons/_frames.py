@@ -17,6 +17,10 @@ def frames_folder(location: StorageLocation) -> str:
     return posixpath.join(location.uri, FRAMES_PREFIX)
 
 
+def frame_key(slot: datetime) -> str:
+    return f"{FRAMES_PREFIX}/{SubgridInputData.goes_input_filename(slot)}"
+
+
 @dataclass
 class SubgridInputData:
     name: str
