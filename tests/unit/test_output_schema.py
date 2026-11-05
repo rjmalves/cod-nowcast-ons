@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import os
 import stat
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -112,7 +111,7 @@ def test_written_object_reads_back_with_the_schema(tmp_path: Path) -> None:
 def test_local_object_is_owner_only(tmp_path: Path) -> None:
     _write(tmp_path)
 
-    assert stat.S_IMODE(os.stat(tmp_path / "cod.parquet").st_mode) == 0o600
+    assert stat.S_IMODE((tmp_path / "cod.parquet").stat().st_mode) == 0o600
 
 
 def test_second_write_replaces_the_object(tmp_path: Path) -> None:

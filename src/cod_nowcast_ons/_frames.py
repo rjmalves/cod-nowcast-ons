@@ -43,11 +43,7 @@ class SubgridInputData:
             & (pl.col("longitude") >= config.lon[0])
             & (pl.col("longitude") <= config.lon[1])
         )
-        df = df.with_columns(
-            [
-                pl.lit(time).alias("time").cast(pl.Datetime),
-            ]
-        )
+        df = df.with_columns(pl.lit(time).alias("time").cast(pl.Datetime))
         return cls(
             name=config.name,
             latitude_range=config.lat,
@@ -74,6 +70,6 @@ class InputData:
             SubgridInputData.from_storage(subgrid, slot, self.storage).cod
             for slot in slots
         ]
-        cod_df: pl.DataFrame = pl.concat(cod_dfs).sort(self.INDEX_COLS)
+        cod_df = pl.concat(cod_dfs).sort(self.INDEX_COLS)
         cod_pd_df = cod_df.to_pandas().set_index(self.INDEX_COLS)
         return cod_pd_df.to_xarray()["cod"]

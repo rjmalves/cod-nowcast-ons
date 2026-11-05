@@ -55,12 +55,6 @@ def generated_shapefile(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.fixture
-def test_shapefile_path(generated_shapefile: Path) -> Path:
-    """Path to test shapefile for plotting tests."""
-    return generated_shapefile
-
-
-@pytest.fixture
 def temp_output_dir() -> Generator[Path, None, None]:
     """Temporary directory for test outputs."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -123,14 +117,6 @@ def sample_cod_dataarray() -> xr.DataArray:
 
     # Convert to xarray (this is how the frame reader does it)
     return df.to_xarray()["cod"]
-
-
-@pytest.fixture
-def sample_motion_field() -> np.ndarray:
-    """Sample motion field (U, V components) for testing."""
-    # Create 2x10x10 array (U and V components)
-    np.random.seed(42)
-    return np.random.randn(2, 10, 10) * 0.5
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
