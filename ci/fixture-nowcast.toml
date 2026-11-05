@@ -1,6 +1,9 @@
-# Nowcast over the committed fixture frames for the image smoke run in CI.
+# Nowcast over the fixture frames for the image smoke run in CI. The script
+# materializes them from the committed text source; [input] is the layout
+# root that holds them under goes_processed/.
 # Plots stay off: they download map data, and the run has no network.
-base_datetime = "2024-08-01T00:50:00Z"
+# The last slot of the committed cut; a new cut needs a new value here.
+base_datetime = "2024-02-07T00:40:00Z"
 num_past_samples = 4
 num_future_samples = 3
 
