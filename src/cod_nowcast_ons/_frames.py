@@ -85,13 +85,10 @@ class InputData:
             base_datetime - timedelta(minutes=10 * i)
             for i in reversed(range(1, num_past_samples + 1))
         ]
-        cod_dfs = []
-        for time in goes_times:
-            subgrid_data = SubgridInputData.from_parquet(
-                subgrid, time, self.path
-            )
-            cod_dfs.append(subgrid_data.cod)
+        cod_dfs = [
+            SubgridInputData.from_parquet(subgrid, time, self.path).cod
+            for time in goes_times
+        ]
         cod_df: pl.DataFrame = pl.concat(cod_dfs).sort(self.INDEX_COLS)
         cod_pd_df = cod_df.to_pandas().set_index(self.INDEX_COLS)
-        cod_xr = cod_pd_df.to_xarray()["cod"]
-        return cod_xr
+        return cod_pd_df.to_xarray()["cod"]

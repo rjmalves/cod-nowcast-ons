@@ -136,8 +136,7 @@ def sample_motion_field() -> np.ndarray:
     """Sample motion field (U, V components) for testing."""
     # Create 2x10x10 array (U and V components)
     np.random.seed(42)
-    motion = np.random.randn(2, 10, 10) * 0.5
-    return motion
+    return np.random.randn(2, 10, 10) * 0.5
 
 
 @pytest.fixture

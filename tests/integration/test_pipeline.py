@@ -183,7 +183,7 @@ class TestPipelineErrorHandling:
         reader = InputData("nonexistent_directory")
 
         # Should raise error for missing files
-        with pytest.raises(Exception) as _:
+        with pytest.raises(Exception):
             predict_subgrids(
                 reader,
                 [
@@ -212,7 +212,7 @@ class TestPipelineErrorHandling:
         reader = InputData(str(test_data_dir))
 
         # Should handle empty data gracefully or raise error
-        with pytest.raises(Exception) as _:
+        with pytest.raises(Exception):
             predict_subgrids(
                 reader,
                 [

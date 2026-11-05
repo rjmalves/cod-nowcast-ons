@@ -43,7 +43,7 @@ class TestSubgridInputData:
         expected_path = test_data_dir / expected_name
 
         # Copy with expected name if needed
-        if not expected_path.exists() and test_files:
+        if not expected_path.exists():
             shutil.copy(test_files[0], expected_path)
 
         try:
@@ -181,7 +181,7 @@ class TestInputData:
         reader = InputData(str(tmp_path))
         base_time = datetime(2024, 8, 1, 1, 0)
 
-        with pytest.raises(Exception) as _:  # FileNotFoundError or similar
+        with pytest.raises(Exception):  # FileNotFoundError or similar
             reader.for_subgrid(subgrid, 6, base_time)
 
 

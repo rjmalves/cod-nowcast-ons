@@ -21,10 +21,10 @@ def write_inference_results(
     storage = StorageFactory.get_storage(output)
     storage.makedirs(output)
 
-    dfs = []
-    for _, subgrid_result in result.subgrid_results.items():
-        df = subgrid_result.cod.to_dataframe(name="cod").reset_index()
-        dfs.append(df)
+    dfs = [
+        subgrid_result.cod.to_dataframe(name="cod").reset_index()
+        for subgrid_result in result.subgrid_results.values()
+    ]
 
     final_df = pd.concat(dfs, axis=0, ignore_index=True)
     final_df["data_hora_rodada"] = issue_time
