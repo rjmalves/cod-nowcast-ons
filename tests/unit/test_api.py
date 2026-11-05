@@ -136,5 +136,19 @@ def test_issue_time_is_logged(
     assert issued["frames_used"] == 2
 
 
+def test_summary_counts_the_written_parquet(
+    frames_root: Path, tmp_path: Path
+) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+
+    outcome = nowcast(_config(frames_root, out, SLOTS[P], num_past=P))
+
+    (item,) = outcome.items
+    assert item.artifacts_written == 1
+    assert item.bytes_written == (out / "cod.parquet").stat().st_size
+    assert outcome.to_summary().bytes_written == item.bytes_written
+
+
 def test_stale_input_is_an_unregistered_success_reason() -> None:
     assert ItemReport.succeeded("stale_input").status is ItemStatus.SUCCEEDED

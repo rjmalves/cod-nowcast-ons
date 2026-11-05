@@ -109,7 +109,13 @@ def _nowcast_item(
         slots=tuple(slot.replace(tzinfo=None) for slot in selection.slots),
         num_future_samples=config.num_future_samples,
     )
-    write_inference_results(result, outputs, naive)
+    receipts = [write_inference_results(result, outputs, naive)]
     if config.postprocessing.plots:
-        write_cloud_motion_plots(result, outputs, _shapes(config, shapes))
-    return ItemReport.succeeded("stale_input" if issue < base else None)
+        receipts += write_cloud_motion_plots(
+            result, outputs, _shapes(config, shapes)
+        )
+    return ItemReport.succeeded(
+        "stale_input" if issue < base else None,
+        bytes_written=sum(receipt.size for receipt in receipts),
+        artifacts_written=len(receipts),
+    )

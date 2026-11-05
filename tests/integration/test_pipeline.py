@@ -183,6 +183,12 @@ class TestFullPipeline:
 
         assert outcome.exit_code == 0
         plots = temp_output_dir / "plots"
+        (item,) = outcome.items
+        written = [temp_output_dir / "cod.parquet", *plots.iterdir()]
+        assert item.artifacts_written == 1 + (2 + 1)
+        assert item.bytes_written == sum(
+            path.stat().st_size for path in written
+        )
         assert sorted(path.name for path in plots.iterdir()) == [
             "TEST_0000.png",
             "TEST_0001.png",
